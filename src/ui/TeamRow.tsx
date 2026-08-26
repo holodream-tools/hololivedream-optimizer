@@ -18,7 +18,8 @@ export interface TeamRowProps {
   value: number;
   members: CardJson[];
   leader: LeaderJson;
-  imageUrl: (card: CardJson) => string | undefined;
+  /** Card artwork by id, so the Leader Outfit resolves even when it is not a member. */
+  imageUrl: (cardId: string) => string | undefined;
   /** Score of the best team, for the relative bar. */
   best: number;
   /** Opens this team on the song page, when the caller supports it. */
@@ -26,9 +27,24 @@ export interface TeamRowProps {
   breakdown?: TeamBreakdown;
 }
 
+/** `白銀ノエル（波まとうゆるふわKnight）` -> name and costume, separately. */
+function splitLeaderName(value: string): [string, string] {
+  const open = value.indexOf('（');
+  if (open < 0) return [value, ''];
+  return [value.slice(0, open), value.slice(open + 1).replace(/）$/, '')];
+}
+
 export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSong, breakdown }: TeamRowProps) {
   const [open, setOpen] = useState(false);
   const share = best > 0 ? value / best : 0;
+
+  // The Outfit is its own slot: it lends a costume skill whether or not that card
+  // is also one of the five. Showing it separately every time keeps one layout
+  // for both cases, and makes the two roles legible rather than conflated.
+  const leaderCardId = leader.id.replace(/^outfit:/, '');
+  const [leaderName, leaderCostume] = splitLeaderName(leader.name);
+  const leaderAlsoPlays = members.some((card) => card.id === leaderCardId);
+
   return (
     <article className={`team${rank === 1 ? ' is-best' : ''}`}>
       <div className="team-head">
@@ -38,9 +54,7 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
           <span className="team-share">{(share * 100).toFixed(1)}%</span>
         </div>
         <div className="team-bar" aria-hidden="true"><i style={{ width: `${share * 100}%` }} /></div>
-        <p className="team-leader">
-          <span className="team-leader-tag">Leader</span>
-          {leader.name}
+        <p className="team-actions">
           {breakdown && (
             <button type="button" className="team-why" aria-expanded={open}
                     onClick={() => setOpen((value) => !value)}>
@@ -52,12 +66,24 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
           )}
         </p>
       </div>
+
       <ol className="team-members">
+        <li className="is-leader">
+          <span className="leader-crest">隊長</span>
+          {imageUrl(leaderCardId)
+            ? <img src={imageUrl(leaderCardId)} alt="" loading="lazy" width={192} height={108} />
+            : <span className="team-noart">Outfit</span>}
+          <span className="team-member-name">{leaderName}</span>
+          <span className="team-member-title">{leaderCostume || '—'}</span>
+          <span className="leader-role">{leaderAlsoPlays ? '服裝＋上場' : '僅提供服裝'}</span>
+        </li>
+
         {members.map((card, slot) => {
           const style = attributeStyle(card.type);
-          const url = imageUrl(card);
+          const url = imageUrl(card.id);
           return (
-            <li key={`${card.id}-${slot}`} style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}>
+            <li key={`${card.id}-${slot}`}
+                style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}>
               {url
                 ? <img src={url} alt="" loading="lazy" width={192} height={108} />
                 : <span className="team-noart">{style.label}</span>}

@@ -14,16 +14,19 @@ import type { AppState } from '../lib/appState';
 import type { CardJson } from '../engine/types';
 import type { ChartMeta } from '../engine/chartScore';
 
-type SongSort = 'newest' | 'level' | 'length' | 'title';
+type SongSort = 'id' | 'level' | 'notes' | 'length' | 'title';
 
 /**
- * `newest` sorts on musicId, which increases with each addition. That is an
- * ordering, not a release date -- the catalogue carries no dates -- so the
- * control says 新→舊 rather than claiming a year.
+ * `id` sorts on the game's own song number. It is NOT a release order: the ids
+ * fall into three separate blocks (m0001-0206, m0300-0353, m0524), so comparing
+ * across blocks says nothing about which song came first. The label names the
+ * number rather than implying a date, and the catalogue carries no dates to do
+ * better with.
  */
 const SORTS: ReadonlyArray<readonly [SongSort, string]> = [
-  ['newest', '新→舊'],
+  ['id', '曲目編號'],
   ['level', '難度'],
+  ['notes', '音符數'],
   ['length', '曲長'],
   ['title', '歌名'],
 ];
@@ -33,7 +36,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
   const [chartKey, setChartKey] = useState('');
   const [query, setQuery] = useState('');
   const [difficulty, setDifficulty] = useState('Expert');
-  const [sort, setSort] = useState<SongSort>('newest');
+  const [sort, setSort] = useState<SongSort>('level');
   const [pickedTeam, setPickedTeam] = useState<number>(teamIndex ?? 0);
 
   useEffect(() => { loadCharts(); }, [loadCharts]);
@@ -50,8 +53,9 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
     const compare: Record<SongSort, (a: ChartMeta, b: ChartMeta) => number> = {
       // Newest, hardest and longest first: that is the direction a player wants
       // when they reach for the control at all.
-      newest: (a, b) => String(b.musicId).localeCompare(String(a.musicId)) || byTitle(a, b),
+      id: (a, b) => String(b.musicId).localeCompare(String(a.musicId)) || byTitle(a, b),
       level: (a, b) => (b.difficultyLevel ?? 0) - (a.difficultyLevel ?? 0) || byTitle(a, b),
+      notes: (a, b) => (b.fullComboNoteCount ?? 0) - (a.fullComboNoteCount ?? 0) || byTitle(a, b),
       length: (a, b) => (b.playingSeconds ?? 0) - (a.playingSeconds ?? 0) || byTitle(a, b),
       title: byTitle,
     };
@@ -147,6 +151,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
               <span className="sort-label">排序</span>
               {SORTS.map(([value, label]) => (
                 <button key={value} className={sort === value ? 'is-on' : ''}
+                        title={value === 'title' ? '由 A 到 Z' : '由大到小'}
                         onClick={() => setSort(value)}>{label}</button>
               ))}
             </div>
@@ -168,6 +173,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                         <span className="song-meta">
                           {chart.difficulty} · {(chart.fullComboNoteCount ?? 0).toLocaleString()} notes
                           {' · '}{duration(chart.playingSeconds)}
+                          {sort === 'id' && <span className="song-id"> · {chart.musicId}</span>}
                         </span>
                       </span>
                     </button>

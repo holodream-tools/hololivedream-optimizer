@@ -113,15 +113,30 @@ button:disabled { opacity: .45; cursor: default; }
 .team-bar { height: 5px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .team.is-best .team-bar { background: color-mix(in srgb, var(--brand) 18%, transparent); }
 .team-bar i { display: block; height: 100%; background: var(--brand); border-radius: 999px; }
-.team-leader { grid-column: 2 / -1; margin: 0; font-size: 13px; color: var(--ink-2); }
-.team-leader-tag { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-                   color: var(--brand); background: var(--surface); border: 1px solid var(--brand-line);
-                   border-radius: 4px; padding: 1px 6px; margin-right: 8px; }
+.team-actions { grid-column: 2 / -1; margin: 0; display: flex; gap: 4px; align-items: baseline; }
+/* Six slots: the Outfit, then the five who take the stage. */
 .team-members { list-style: none; display: grid; gap: 8px; margin: 0; padding: 0;
-                grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
-.team-members li { border: 1px solid var(--line); border-left: 3px solid var(--accent);
-                   border-radius: 8px; overflow: hidden; background: var(--surface);
-                   display: flex; flex-direction: column; }
+                grid-template-columns: repeat(auto-fit, minmax(122px, 1fr)); }
+.team-members li { position: relative; border: 1px solid var(--line);
+                   border-left: 3px solid var(--accent); border-radius: 8px; overflow: hidden;
+                   background: var(--surface); display: flex; flex-direction: column; }
+
+/* The Outfit slot is a different role, not a sixth member: it is set apart by a
+   ring, a crest over the artwork, and a line stating which role it is playing. */
+.team-members li.is-leader { border-color: var(--brand-line); border-left-width: 3px;
+                             border-left-color: var(--brand); background: var(--brand-soft);
+                             box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 22%, transparent); }
+.team-members li.is-leader::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+                                    border-radius: 6px;
+                                    background: linear-gradient(180deg,
+                                      color-mix(in srgb, var(--brand) 26%, transparent) 0,
+                                      transparent 52px); }
+.leader-crest { position: absolute; top: 6px; left: 6px; z-index: 1; font-size: 10px;
+                font-weight: 700; letter-spacing: .1em; line-height: 1; color: #fff;
+                background: var(--brand); border-radius: 4px; padding: 4px 8px; }
+.leader-role { font-size: 10px; font-weight: 650; color: var(--brand);
+               background: var(--surface); border-top: 1px solid var(--brand-line);
+               padding: 4px 8px; margin-top: auto; }
 .team-members img { width: 100%; height: auto; display: block; aspect-ratio: 16 / 9; object-fit: cover; }
 .team-noart { display: block; padding: 18px 10px; text-align: center; font-size: 11px;
               font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
@@ -487,3 +502,5 @@ button:disabled { opacity: .45; cursor: default; }
 .count input[type="range"]:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
 
 .sort-label { font-size: 12.5px; color: var(--ink-3); align-self: center; margin-right: 3px; }
+
+.song-id { color: var(--accent); font-weight: 600; }

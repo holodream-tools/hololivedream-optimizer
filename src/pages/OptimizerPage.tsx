@@ -8,7 +8,6 @@ import { optimize } from '../lib/optimizerClient';
 import { PinPicker } from '../ui/PinPicker';
 import { TeamRow } from '../ui/TeamRow';
 import type { AppState } from '../lib/appState';
-import type { CardJson } from '../engine/types';
 
 export function OptimizerPage({ state, onOpenSong }: { state: AppState; onOpenSong: (index: number) => void }) {
   const { bundle, images, owned, unlockedLeaders, inventory, stamp, run } = state;
@@ -25,7 +24,7 @@ export function OptimizerPage({ state, onOpenSong }: { state: AppState; onOpenSo
   // display count and the diversity filters are pure slicing, never a recompute.
   const KEPT = 200;
   const abortRef = useRef<AbortController | null>(null);
-  const imageUrl = (card: CardJson) => images?.url(card.id);
+  const imageUrl = (cardId: string) => images?.url(cardId);
 
   // Four is the useful maximum: pinning all five leaves nothing to search for.
   const MAX_PINNED = 4;
@@ -128,7 +127,7 @@ export function OptimizerPage({ state, onOpenSong }: { state: AppState; onOpenSo
       </section>
 
       <PinPicker
-        owned={owned} pinned={pinned} max={MAX_PINNED} imageUrl={imageUrl}
+        owned={owned} pinned={pinned} max={MAX_PINNED} imageUrl={(card) => imageUrl(card.id)}
         onToggle={(cardId) => setPinned((previous) => previous.includes(cardId)
           ? previous.filter((value) => value !== cardId)
           : previous.length < MAX_PINNED ? [...previous, cardId] : previous)}
