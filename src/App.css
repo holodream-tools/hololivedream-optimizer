@@ -8,6 +8,10 @@
   --cute: #C43B76; --cute-soft: #FBECF2; --cute-line: #EEBBD1;
   --happy: #B4700C; --happy-soft: #FCF3E2; --happy-line: #E9CE95;
   --pure: #1C6E86; --pure-soft: #E6F2F6; --pure-line: #A9CFDC;
+  --easy: #2F7D4F; --easy-soft: #E7F4EC; --easy-line: #A8D3BA;
+  --normal: #2B5FA8; --normal-soft: #E8EFF9; --normal-line: #AEC4E4;
+  --hard: #A65A16; --hard-soft: #FBF0E4; --hard-line: #E5C39B;
+  --expert: #9B2C43; --expert-soft: #FBEBEE; --expert-line: #E7B3BE;
   --shadow: 0 1px 2px rgba(27, 22, 32, .06), 0 6px 16px rgba(27, 22, 32, .05);
 }
 @media (prefers-color-scheme: dark) {
@@ -19,6 +23,10 @@
     --cute: #F085AF; --cute-soft: #2C1822; --cute-line: #5D3144;
     --happy: #E0AC58; --happy-soft: #2A2114; --happy-line: #584623;
     --pure: #6BBBD4; --pure-soft: #12242B; --pure-line: #2A4E5B;
+    --easy: #6FC793; --easy-soft: #122318; --easy-line: #2B4E38;
+    --normal: #7FAEE8; --normal-soft: #131C2A; --normal-line: #2E4363;
+    --hard: #E0A566; --hard-soft: #2A1E12; --hard-line: #584023;
+    --expert: #EE8A9E; --expert-soft: #2B161B; --expert-line: #5B2F39;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 16px rgba(0, 0, 0, .25);
   }
 }
@@ -302,10 +310,18 @@ button:disabled { opacity: .45; cursor: default; }
              border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .song-list li + li { border-top: 1px solid var(--line-soft); }
 .song-list button { width: 100%; border: 0; border-radius: 0; background: transparent;
-                    padding: 9px 13px; display: grid; gap: 1px; text-align: left;
+                    padding: 8px 13px; display: grid; grid-template-columns: 30px minmax(0, 1fr);
+                    gap: 10px; align-items: center; text-align: left;
                     border-left: 3px solid transparent; }
 .song-list button:hover { background: var(--surface-2); }
-.song-list button.is-on { border-left-color: var(--brand); background: var(--surface-2); }
+.song-list button.is-on { border-left-color: var(--accent); background: var(--accent-soft); }
+/* The level badge carries the difficulty colour, so the list is scannable by
+   difficulty without reading a word of it. */
+.song-level { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px;
+              background: var(--accent-soft); border: 1px solid var(--accent-line);
+              color: var(--accent); font-size: 13px; font-weight: 700;
+              font-variant-numeric: tabular-nums; }
+.song-text { min-width: 0; display: grid; gap: 1px; }
 .song-title { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis;
               white-space: nowrap; }
 .song-meta { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
@@ -469,3 +485,5 @@ button:disabled { opacity: .45; cursor: default; }
 .count input[type="range"] { width: 132px; accent-color: var(--brand); cursor: pointer;
                              background: transparent; padding: 0; border: 0; }
 .count input[type="range"]:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+
+.sort-label { font-size: 12.5px; color: var(--ink-3); align-self: center; margin-right: 3px; }

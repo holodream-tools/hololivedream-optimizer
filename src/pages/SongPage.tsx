@@ -9,17 +9,31 @@ import { useEffect, useMemo, useState } from 'react';
 import { materialize, prepare, projectedScore } from '../engine/chartScore';
 import { cardFacts, outfitTable } from '../engine/precompute';
 import { makeMemberState, memberPart } from '../engine/overallScore';
-import { attributeStyle } from '../ui/theme';
+import { DIFFICULTIES, attributeStyle, difficultyStyle, duration } from '../ui/theme';
 import type { AppState } from '../lib/appState';
 import type { CardJson } from '../engine/types';
+import type { ChartMeta } from '../engine/chartScore';
 
-const DIFFICULTY_ORDER = ['Easy', 'Normal', 'Hard', 'Expert'];
+type SongSort = 'newest' | 'level' | 'length' | 'title';
+
+/**
+ * `newest` sorts on musicId, which increases with each addition. That is an
+ * ordering, not a release date -- the catalogue carries no dates -- so the
+ * control says 新→舊 rather than claiming a year.
+ */
+const SORTS: ReadonlyArray<readonly [SongSort, string]> = [
+  ['newest', '新→舊'],
+  ['level', '難度'],
+  ['length', '曲長'],
+  ['title', '歌名'],
+];
 
 export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: number | null }) {
   const { bundle, images, charts, chartBlob, chartsLoading, loadCharts, run, inventory } = state;
   const [chartKey, setChartKey] = useState('');
   const [query, setQuery] = useState('');
   const [difficulty, setDifficulty] = useState('Expert');
+  const [sort, setSort] = useState<SongSort>('newest');
   const [pickedTeam, setPickedTeam] = useState<number>(teamIndex ?? 0);
 
   useEffect(() => { loadCharts(); }, [loadCharts]);
@@ -28,12 +42,21 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
   const visibleCharts = useMemo(() => {
     if (!charts) return [];
     const needle = query.trim().toLowerCase();
-    return charts.charts
-      .filter((chart) => (!difficulty || chart.difficulty === difficulty)
-        && (!needle || String(chart.title ?? '').toLowerCase().includes(needle)))
-      .sort((a, b) => (a.difficultyLevel ?? 0) - (b.difficultyLevel ?? 0)
-        || String(a.title).localeCompare(String(b.title), 'ja'));
-  }, [charts, query, difficulty]);
+    const rows = charts.charts.filter((chart) =>
+      (!difficulty || chart.difficulty === difficulty)
+      && (!needle || String(chart.title ?? '').toLowerCase().includes(needle)));
+    const byTitle = (a: ChartMeta, b: ChartMeta) =>
+      String(a.title).localeCompare(String(b.title), 'ja');
+    const compare: Record<SongSort, (a: ChartMeta, b: ChartMeta) => number> = {
+      // Newest, hardest and longest first: that is the direction a player wants
+      // when they reach for the control at all.
+      newest: (a, b) => String(b.musicId).localeCompare(String(a.musicId)) || byTitle(a, b),
+      level: (a, b) => (b.difficultyLevel ?? 0) - (a.difficultyLevel ?? 0) || byTitle(a, b),
+      length: (a, b) => (b.playingSeconds ?? 0) - (a.playingSeconds ?? 0) || byTitle(a, b),
+      title: byTitle,
+    };
+    return [...rows].sort(compare[sort]);
+  }, [charts, query, difficulty, sort]);
 
   const team = run?.rows[pickedTeam];
 
@@ -111,9 +134,20 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
             <input type="search" value={query} placeholder="搜尋歌名"
                    onChange={(event) => setQuery(event.target.value)} />
             <div className="attr-filter" role="group" aria-label="難度">
-              {DIFFICULTY_ORDER.map((value) => (
-                <button key={value} className={difficulty === value ? 'is-on' : ''}
-                        onClick={() => setDifficulty(value)}>{value}</button>
+              {DIFFICULTIES.map((value) => {
+                const style = difficultyStyle(value);
+                return (
+                  <button key={value} className={difficulty === value ? 'is-on' : ''}
+                          style={{ ['--accent' as string]: style.accent, ['--accent-soft' as string]: style.soft, ['--accent-line' as string]: style.line }}
+                          onClick={() => setDifficulty(value)}>{value}</button>
+                );
+              })}
+            </div>
+            <div className="attr-filter" role="group" aria-label="排序">
+              <span className="sort-label">排序</span>
+              {SORTS.map(([value, label]) => (
+                <button key={value} className={sort === value ? 'is-on' : ''}
+                        onClick={() => setSort(value)}>{label}</button>
               ))}
             </div>
             <span className="page-count">{visibleCharts.length} 首</span>
@@ -121,14 +155,25 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
 
           <div className="song-split">
             <ol className="song-list">
-              {visibleCharts.map((chart) => (
-                <li key={chart.key}>
-                  <button className={chart.key === chartKey ? 'is-on' : ''} onClick={() => setChartKey(chart.key)}>
-                    <span className="song-title">{chart.title}</span>
-                    <span className="song-meta">Lv.{chart.difficultyLevel} · {chart.fullComboNoteCount} notes</span>
-                  </button>
-                </li>
-              ))}
+              {visibleCharts.map((chart) => {
+                const style = difficultyStyle(chart.difficulty);
+                return (
+                  <li key={chart.key}>
+                    <button className={chart.key === chartKey ? 'is-on' : ''}
+                            style={{ ['--accent' as string]: style.accent, ['--accent-soft' as string]: style.soft, ['--accent-line' as string]: style.line }}
+                            onClick={() => setChartKey(chart.key)}>
+                      <span className="song-level">{chart.difficultyLevel}</span>
+                      <span className="song-text">
+                        <span className="song-title">{chart.title}</span>
+                        <span className="song-meta">
+                          {chart.difficulty} · {(chart.fullComboNoteCount ?? 0).toLocaleString()} notes
+                          {' · '}{duration(chart.playingSeconds)}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ol>
 
             <div className="song-detail">
