@@ -88,6 +88,9 @@ export function activeConditionMet(condition: unknown, typeCounts: Map<string, n
   if (typeof condition !== 'string') return false;
   if (condition.endsWith('_2')) return (typeCounts.get(condition.slice(0, -2).toLowerCase()) ?? 0) >= 2;
   if (condition.startsWith('life_')) return Number(condition.slice(condition.lastIndexOf('_') + 1)) <= 1000;
+  // Combo thresholds are passed within the first seconds of any song. That
+  // slightly overstates the opening, where the threshold is not reached yet;
+  // the chart model times it exactly.
   if (condition.startsWith('combo_')) return true;
   return false;
 }
@@ -180,12 +183,15 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
   }
 
   // Each Rate Up window contributes its own rate for its own duration, so the
-  // average is sum(rate x duration) / song. A conditional one is left out.
+  // average is sum(rate x duration) / song. A gated Rate Up goes through the
+  // same test as a gated Active value.
   let staticSupport = 0, specialSupport = 0, sarPoints = 0;
   for (let i = 0; i < 5; i++) {
     staticSupport += supports[i];
     specialSupport += rows[i].specialSupportAverage;
-    if (rows[i].specialSkillRateUp && !rows[i].specialRateCondition) {
+    const rateCondition = rows[i].specialRateCondition;
+    if (rows[i].specialSkillRateUp
+        && (!rateCondition || activeConditionMet(rateCondition, typeCounts))) {
       sarPoints += rows[i].specialSarAverage;
     }
   }
