@@ -8,6 +8,7 @@
  * see tests/parity.overallScore.test.ts.
  */
 import { expectedMaximum } from './active';
+import { GENERIC_SONG_SECONDS } from './precompute';
 import type { CardFacts, OutfitCondition, OutfitPayload } from './types';
 
 const ALL_PARAM = new Set(['self_all_param_conditional', 'type_all_param']);
@@ -74,6 +75,22 @@ function sortByKey(slice: Int32Array, n: number, keys: Float64Array): void {
     }
     slice[j + 1] = key;
   }
+}
+
+/**
+ * Generic Active condition check, driven by precounted member attributes.
+ *
+ * Attribute conditions are team facts. Combo and Life conditions have no chart
+ * to test against here, so they follow the same assumptions the chart model
+ * already makes: a Perfect run never drops Life, and the only Combo threshold
+ * in the data (40) is passed within the first seconds of any song.
+ */
+export function activeConditionMet(condition: unknown, typeCounts: Map<string, number>): boolean {
+  if (typeof condition !== 'string') return false;
+  if (condition.endsWith('_2')) return (typeCounts.get(condition.slice(0, -2).toLowerCase()) ?? 0) >= 2;
+  if (condition.startsWith('life_')) return Number(condition.slice(condition.lastIndexOf('_') + 1)) <= 1000;
+  if (condition.startsWith('combo_')) return true;
+  return false;
 }
 
 export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state: MemberState): MemberState {
@@ -163,27 +180,30 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
     baseSums[k] = sum;
   }
 
-  let staticSupport = 0, specialSupport = 0, sar = 0;
+  // Skill Activation Rate Up percentages are summed first and applied
+  // multiplicatively; a conditional one needs chart timing, so it is left out.
+  let staticSupport = 0, specialSupport = 0, sarRate = 0, sarSeconds = 0;
   for (let i = 0; i < 5; i++) {
     staticSupport += supports[i];
     specialSupport += rows[i].specialSupportAverage;
-    sar += rows[i].specialSarAverage;
+    if (rows[i].specialSkillRateUp && !rows[i].specialRateCondition) {
+      sarRate += rows[i].specialSkillRateUp;
+      sarSeconds += rows[i].specialDuration;
+    }
   }
+  const sarShare = Math.min(1, sarSeconds / GENERIC_SONG_SECONDS);
 
   const { effectValues, effectProbabilities } = state;
   let effectCount = 0;
   for (let i = 0; i < 5; i++) {
     const f = rows[i];
     if (!f.activePresent) continue;
-    const probability = Math.min(1, f.activeProbability + sar / 100);
+    const probability = Math.min(1, f.activeProbability * (1 + sarRate / 100)) * sarShare
+      + f.activeProbability * (1 - sarShare);
     const coverage = f.activeInterval > 0
       ? Math.min(1, probability * f.activeDuration / f.activeInterval) : 0;
     let scoreUp = f.activeScoreUp;
-    const condition = f.activeCondition;
-    // Attribute conditions are team facts; Combo/Life need real chart timing, so
-    // the generic model deliberately keeps the base value for those.
-    if (f.activeConditionalScoreUp !== null && typeof condition === 'string' && condition.endsWith('_2')
-        && (typeCounts.get(condition.slice(0, -2).toLowerCase()) ?? 0) >= 2) {
+    if (f.activeConditionalScoreUp !== null && activeConditionMet(f.activeCondition, typeCounts)) {
       scoreUp = f.activeConditionalScoreUp;
     }
     effectValues[effectCount] = scoreUp;

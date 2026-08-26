@@ -229,7 +229,8 @@ export function projectedScore(
         }
       }
       if (magnitude > 0 && misses < 1) {
-        const total = working.supports[i] + leaderSupport + support;
+        // One scoring event uses one Score Support total, not a per-member share.
+        const total = working.staticSupport + leaderSupport + support;
         effectValues[effectCount] = magnitude * (1 + total / 100);
         effectProbabilities[effectCount] = 1 - misses;
         effectCount++;
