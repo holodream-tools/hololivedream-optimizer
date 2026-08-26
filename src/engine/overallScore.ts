@@ -8,7 +8,6 @@
  * see tests/parity.overallScore.test.ts.
  */
 import { expectedMaximum } from './active';
-import { GENERIC_SONG_SECONDS } from './precompute';
 import type { CardFacts, OutfitCondition, OutfitPayload } from './types';
 
 const ALL_PARAM = new Set(['self_all_param_conditional', 'type_all_param']);
@@ -180,26 +179,23 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
     baseSums[k] = sum;
   }
 
-  // Skill Activation Rate Up percentages are summed first and applied
-  // multiplicatively; a conditional one needs chart timing, so it is left out.
-  let staticSupport = 0, specialSupport = 0, sarRate = 0, sarSeconds = 0;
+  // Each Rate Up window contributes its own rate for its own duration, so the
+  // average is sum(rate x duration) / song. A conditional one is left out.
+  let staticSupport = 0, specialSupport = 0, sarPoints = 0;
   for (let i = 0; i < 5; i++) {
     staticSupport += supports[i];
     specialSupport += rows[i].specialSupportAverage;
     if (rows[i].specialSkillRateUp && !rows[i].specialRateCondition) {
-      sarRate += rows[i].specialSkillRateUp;
-      sarSeconds += rows[i].specialDuration;
+      sarPoints += rows[i].specialSarAverage;
     }
   }
-  const sarShare = Math.min(1, sarSeconds / GENERIC_SONG_SECONDS);
 
   const { effectValues, effectProbabilities } = state;
   let effectCount = 0;
   for (let i = 0; i < 5; i++) {
     const f = rows[i];
     if (!f.activePresent) continue;
-    const probability = Math.min(1, f.activeProbability * (1 + sarRate / 100)) * sarShare
-      + f.activeProbability * (1 - sarShare);
+    const probability = Math.min(1, f.activeProbability * (1 + sarPoints / 100));
     const coverage = f.activeInterval > 0
       ? Math.min(1, probability * f.activeDuration / f.activeInterval) : 0;
     let scoreUp = f.activeScoreUp;
