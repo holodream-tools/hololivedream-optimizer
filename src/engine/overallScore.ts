@@ -18,8 +18,10 @@ const STAT_SLOT: Record<string, number> = { performance: 0, technique: 1, sense:
 /** Reusable buffers: the optimizer calls memberPart millions of times. */
 export interface MemberState {
   rows: CardFacts[];
-  stats: Float64Array;      // 5 x [performance, technique, sense]
+  base: Float64Array;       // 5 x [performance, technique, sense]; never mutated after load
+  rates: Float64Array;      // 5 x [performance, technique, sense]; accumulated percentages
   totals: Float64Array;
+  statKeys: Float64Array;
   supports: Float64Array;
   order: Int32Array;
   recipients: Int32Array;
@@ -28,6 +30,8 @@ export interface MemberState {
   effectProbabilities: Float64Array;
   typeCounts: Map<string, number>;
   generationCounts: Map<string, number>;
+  baseSums: Float64Array;   // per-parameter totals across the five members
+  memberPower: number;      // base parameters plus the Passive increment
   staticSupport: number;
   specialSupport: number;
   activeScoreUp: number;
@@ -35,11 +39,13 @@ export interface MemberState {
 
 export function makeMemberState(): MemberState {
   return {
-    rows: new Array(5), stats: new Float64Array(15), totals: new Float64Array(5),
+    rows: new Array(5), base: new Float64Array(15), rates: new Float64Array(15),
+    totals: new Float64Array(5), statKeys: new Float64Array(5),
     supports: new Float64Array(5), order: new Int32Array(5),
     recipients: new Int32Array(5), eligible: new Int32Array(5),
     effectValues: new Float64Array(5), effectProbabilities: new Float64Array(5),
     typeCounts: new Map(), generationCounts: new Map(),
+    baseSums: new Float64Array(3), memberPower: 0,
     staticSupport: 0, specialSupport: 0, activeScoreUp: 0,
   };
 }
@@ -58,12 +64,12 @@ export function conditionMet(condition: OutfitCondition | null | undefined,
   return false;
 }
 
-/** Insertion sort of `slice` by (-totals[i], i); n is at most 5. */
-function sortByTotal(slice: Int32Array, n: number, totals: Float64Array): void {
+/** Insertion sort of `slice` by (-keys[i], i); n is at most 5. */
+function sortByKey(slice: Int32Array, n: number, keys: Float64Array): void {
   for (let i = 1; i < n; i++) {
     const key = slice[i];
     let j = i - 1;
-    while (j >= 0 && (totals[slice[j]] < totals[key] || (totals[slice[j]] === totals[key] && slice[j] > key))) {
+    while (j >= 0 && (keys[slice[j]] < keys[key] || (keys[slice[j]] === keys[key] && slice[j] > key))) {
       slice[j + 1] = slice[j]; j--;
     }
     slice[j + 1] = key;
@@ -71,22 +77,23 @@ function sortByTotal(slice: Int32Array, n: number, totals: Float64Array): void {
 }
 
 export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state: MemberState): MemberState {
-  const { rows, stats, totals, supports, typeCounts, generationCounts } = state;
+  const { rows, base, rates, totals, supports, statKeys, typeCounts, generationCounts } = state;
   typeCounts.clear();
   generationCounts.clear();
   for (let i = 0; i < 5; i++) {
     const f = facts[indices[i]];
     rows[i] = f;
-    stats[i * 3] = f.performance; stats[i * 3 + 1] = f.technique; stats[i * 3 + 2] = f.sense;
+    base[i * 3] = f.performance; base[i * 3 + 1] = f.technique; base[i * 3 + 2] = f.sense;
+    rates[i * 3] = 0; rates[i * 3 + 1] = 0; rates[i * 3 + 2] = 0;
     totals[i] = f.total; supports[i] = 0;
     typeCounts.set(f.type, (typeCounts.get(f.type) ?? 0) + 1);
     generationCounts.set(f.generation, (generationCounts.get(f.generation) ?? 0) + 1);
   }
 
-  // Owner order comes from the pre-passive totals, exactly as the reference does.
+  // Owner order comes from the base totals, exactly as the reference does.
   const order = state.order;
   for (let i = 0; i < 5; i++) order[i] = i;
-  sortByTotal(order, 5, totals);
+  sortByKey(order, 5, totals);
 
   const { recipients, eligible } = state;
   for (let oi = 0; oi < 5; oi++) {
@@ -94,6 +101,10 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
     const row = rows[owner];
     const effect = row.passiveEffect;
     if (!effect || !conditionMet(row.passiveCondition, typeCounts, generationCounts)) continue;
+
+    const oneStat = ONE_STAT.has(effect);
+    const slot = oneStat ? STAT_SLOT[row.passiveStat ?? ''] : undefined;
+    if (oneStat && slot === undefined) continue;   // unknown stat: reported, never applied
 
     const target = row.passiveTarget as { type_match?: string; group?: string; count?: number } | string | null;
     let recipientCount = 0;
@@ -108,8 +119,15 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
         const wanted = target.group;
         for (let i = 0; i < 5; i++) if (rows[i].generation === wanted) eligible[eligibleCount++] = i;
       }
-      // Recipients are picked from the CURRENT (already mutated) totals.
-      sortByTotal(eligible, eligibleCount, totals);
+      // Recipients rank on BASE parameters: on the parameter the effect raises
+      // for a single-stat effect, on the base total otherwise. Nothing an
+      // earlier Passive did can move a later one onto a different member.
+      if (slot === undefined) {
+        sortByKey(eligible, eligibleCount, totals);
+      } else {
+        for (let i = 0; i < 5; i++) statKeys[i] = base[i * 3 + slot];
+        sortByKey(eligible, eligibleCount, statKeys);
+      }
       recipientCount = Math.min(target.count ?? 0, eligibleCount);
       for (let i = 0; i < recipientCount; i++) recipients[i] = eligible[i];
     }
@@ -118,26 +136,31 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
     const value = row.passiveValue;
     if (ALL_PARAM.has(effect)) {
       for (let r = 0; r < recipientCount; r++) {
-        const base = recipients[r] * 3;
-        let gained = 0;
-        for (let k = 0; k < 3; k++) {
-          const step = Math.ceil(stats[base + k] * value / 100);
-          stats[base + k] += step; gained += step;
-        }
-        totals[recipients[r]] += gained;
+        const at = recipients[r] * 3;
+        rates[at] += value; rates[at + 1] += value; rates[at + 2] += value;
       }
-    } else if (ONE_STAT.has(effect)) {
-      const slot = STAT_SLOT[row.passiveStat ?? ''];
-      if (slot !== undefined) {                    // unknown stat: reported, not applied
-        for (let r = 0; r < recipientCount; r++) {
-          const at = recipients[r] * 3 + slot;
-          const step = Math.ceil(stats[at] * value / 100);
-          stats[at] += step; totals[recipients[r]] += step;
-        }
-      }
+    } else if (oneStat) {
+      for (let r = 0; r < recipientCount; r++) rates[recipients[r] * 3 + slot!] += value;
     } else if (SCORE_SUPPORT.has(effect)) {
       for (let r = 0; r < recipientCount; r++) supports[recipients[r]] += value;
     }
+  }
+
+  // Each member's own increment, rounded up once per parameter.
+  let memberPower = 0;
+  for (let i = 0; i < 5; i++) memberPower += totals[i];
+  for (let i = 0; i < 5; i++) {
+    for (let k = 0; k < 3; k++) {
+      const rate = rates[i * 3 + k];
+      if (rate) memberPower += Math.ceil(base[i * 3 + k] * rate / 100);
+    }
+  }
+  state.memberPower = memberPower;
+  const { baseSums } = state;
+  for (let k = 0; k < 3; k++) {
+    let sum = 0;
+    for (let i = 0; i < 5; i++) sum += base[i * 3 + k];
+    baseSums[k] = sum;
   }
 
   let staticSupport = 0, specialSupport = 0, sar = 0;
@@ -174,39 +197,30 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
   return state;
 }
 
-/** Apply one Outfit to the shared member state. Never mutates `state`. */
+/** Apply one Outfit as a separate additive term over the base parameters. */
 export function leaderPowerAndSupport(payload: OutfitPayload | null, state: MemberState): [number, number] {
-  const stats = state.stats;
   if (!payload || !conditionMet(payload.condition, state.typeCounts, state.generationCounts)) {
-    let total = 0;
-    for (let i = 0; i < 5; i++) total += stats[i * 3] + stats[i * 3 + 1] + stats[i * 3 + 2];
-    return [total, 0];
+    return [state.memberPower, 0];
   }
   const effects = payload.effects ?? [];
-  let total = 0;
-  for (let i = 0; i < 5; i++) {
-    let performance = stats[i * 3], technique = stats[i * 3 + 1], sense = stats[i * 3 + 2];
-    for (const effect of effects) {
-      if ((effect.target ?? 'all') !== 'all') continue;
-      const value = Number(effect.value ?? 0);
-      switch (effect.stat) {
-        case 'all':
-          performance += Math.ceil(performance * value / 100);
-          technique += Math.ceil(technique * value / 100);
-          sense += Math.ceil(sense * value / 100);
-          break;
-        case 'performance': performance += Math.ceil(performance * value / 100); break;
-        case 'technique': technique += Math.ceil(technique * value / 100); break;
-        case 'sense': sense += Math.ceil(sense * value / 100); break;
-      }
-    }
-    total += performance + technique + sense;
-  }
-  // "All members' Score Support +X%" is one team aura, counted once.
-  let support = 0;
+  let rp = 0, rt = 0, rs = 0, support = 0;
   for (const effect of effects) {
-    if ((effect.target ?? 'all') === 'all' && effect.stat === 'score_support') support += Number(effect.value ?? 0);
+    if ((effect.target ?? 'all') !== 'all') continue;
+    const value = Number(effect.value ?? 0);
+    switch (effect.stat) {
+      case 'all': rp += value; rt += value; rs += value; break;
+      case 'performance': rp += value; break;
+      case 'technique': rt += value; break;
+      case 'sense': rs += value; break;
+      // "All members' Score Support +X%" is one team aura, counted once.
+      case 'score_support': support += value; break;
+    }
   }
+  const { baseSums } = state;
+  let total = state.memberPower;
+  if (rp) total += Math.ceil(baseSums[0] * rp / 100);
+  if (rt) total += Math.ceil(baseSums[1] * rt / 100);
+  if (rs) total += Math.ceil(baseSums[2] * rs / 100);
   return [total, support];
 }
 
