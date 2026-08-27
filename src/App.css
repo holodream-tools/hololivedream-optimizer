@@ -740,13 +740,16 @@ button:disabled { opacity: .45; cursor: default; }
 .conds h4 span { font-size: 11.5px; font-weight: 400; color: var(--ink-3); }
 .conds ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
 .conds li { display: flex; gap: 9px; align-items: baseline; flex-wrap: wrap;
-            font-size: 12px; padding: 4px 9px; border-radius: 7px; background: var(--surface-2); }
+            font-size: 12px; padding: 4px 9px; border-radius: 7px; background: var(--surface-2);
+            min-width: 0; overflow-wrap: anywhere; }
 .conds li.is-unmet { background: var(--happy-soft); border: 1px solid var(--happy-line); opacity: .82; }
 .conds-flag { font-size: 11px; font-weight: 700; white-space: nowrap; }
 .conds li.is-met .conds-flag { color: var(--brand); }
 .conds li.is-unmet .conds-flag { color: var(--happy); }
-.conds-who { font-weight: 650; white-space: nowrap; }
+/* An Outfit's full name runs to ~390px; refusing to wrap it made the row wider
+   than a phone and scrolled the whole page sideways. */
+.conds-who { font-weight: 650; min-width: 0; }
 .conds-text { color: var(--ink-3); min-width: 0; }
-.conds-reason { color: var(--happy); font-weight: 650; white-space: nowrap; }
+.conds-reason { color: var(--happy); font-weight: 650; min-width: 0; }
 button.danger { color: var(--happy); border-color: var(--happy-line); }
 button.danger:hover { background: var(--happy-soft); }
