@@ -699,16 +699,25 @@ button:disabled { opacity: .45; cursor: default; }
    The Outfit is a separate slot, not a sixth member: it reads left to right,
    and its artwork is deliberately smaller than a member card so it looks like
    where an effect comes from rather than someone taking the stage. */
-.leader-block { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;
+/* The card hugs its contents rather than spanning the row: bounding the picker
+   alone only moved the emptiness from between the two halves to the right of
+   them. As a compact block it reads as one auxiliary slot above the five. */
+.leader-block { display: inline-flex; gap: 15px; align-items: flex-start; flex-wrap: wrap;
+                width: fit-content; max-width: 100%;
                 background: var(--surface); border: 1px solid var(--brand-line);
-                border-radius: 12px; padding: 13px 15px; margin-bottom: 14px; }
-.leader-pick { flex: 1 1 260px; min-width: 0; display: grid; gap: 6px; align-content: start; }
+                border-radius: 12px; padding: 13px 18px 14px 15px; margin-bottom: 14px; }
+/* Bounded, not fixed. Left unbounded the column grew to fill the row, which
+   stretched the select across the whole card and pushed the artwork to the far
+   edge; the two then read as unrelated things at opposite ends rather than as
+   one Leader slot. It still shrinks freely, so narrow screens are unaffected. */
+.leader-pick { flex: 1 1 240px; max-width: 52ch; min-width: 0;
+               display: grid; gap: 6px; align-content: start; }
 .leader-chip-label { font-size: 10.5px; font-weight: 700; letter-spacing: .1em;
                      text-transform: uppercase; color: var(--brand); }
-.leader-pick select { max-width: 100%; }
+.leader-pick select { width: 100%; max-width: 100%; }
 .leader-effect { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.6; }
 .leader-note { margin: 0; font-size: 11.5px; color: var(--ink-3); }
-.leader-art { position: relative; flex: 0 0 auto; width: 132px; }
+.leader-art { position: relative; flex: 0 0 auto; width: 128px; }
 .leader-art img { width: 100%; height: auto; display: block; aspect-ratio: 16 / 9;
                   object-fit: cover; border-radius: 8px; border: 1px solid var(--brand-line); }
 .leader-noart { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 8px;
@@ -716,7 +725,7 @@ button:disabled { opacity: .45; cursor: default; }
 .leader-chip { position: absolute; top: 5px; left: 5px; z-index: 1; font-size: 9px;
                font-weight: 700; letter-spacing: .12em; line-height: 1; color: #fff;
                background: var(--brand); border-radius: 4px; padding: 3px 6px; }
-.team-split { border: 0; border-top: 1px solid var(--line); margin: 0 0 14px; }
+.team-split { border: 0; border-top: 1px solid var(--line-soft); margin: 2px 0 14px; }
 @media (max-width: 560px) { .leader-art { width: 100%; max-width: 220px; } }
 
 /* ---- conditional skills ---- */
