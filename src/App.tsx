@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useAppState } from './lib/appState';
 import { InventoryPage } from './pages/InventoryPage';
 import { LibraryPage } from './pages/LibraryPage';
+import { ComparePage } from './pages/ComparePage';
 import { ManualTeamPage } from './pages/ManualTeamPage';
 import { OptimizerPage } from './pages/OptimizerPage';
 import { SongPage } from './pages/SongPage';
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'manual', label: '自選隊伍', hint: '自己挑五張試算' },
   { id: 'optimizer', label: '隊伍最佳化', hint: '找出最強陣容' },
   { id: 'song', label: '歌曲／順序', hint: '指定譜面與站位' },
+  { id: 'compare', label: '隊伍比較', hint: 'A / B 逐項對照' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -73,8 +75,11 @@ export default function App() {
         )}
         {tab === 'inventory' && <InventoryPage state={state} />}
         {tab === 'library' && <LibraryPage state={state} />}
-        {tab === 'optimizer' && <OptimizerPage state={state} onOpenSong={openSong} />}
-        {tab === 'manual' && <ManualTeamPage state={state} />}
+        {tab === 'optimizer' && (
+          <OptimizerPage state={state} onOpenSong={openSong} onCompare={() => setTab('compare')} />
+        )}
+        {tab === 'compare' && <ComparePage state={state} />}
+        {tab === 'manual' && <ManualTeamPage state={state} onCompare={() => setTab('compare')} />}
         {tab === 'song' && <SongPage state={state} teamIndex={songTeam} />}
       </main>
 

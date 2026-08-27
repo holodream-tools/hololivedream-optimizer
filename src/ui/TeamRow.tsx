@@ -24,6 +24,9 @@ export interface TeamRowProps {
   best: number;
   /** Opens this team on the song page, when the caller supports it. */
   onOpenSong?: () => void;
+  /** Sends this team to the compare page; the label names the slot it lands in. */
+  onCompare?: () => void;
+  compareLabel?: string;
   breakdown?: TeamBreakdown;
 }
 
@@ -34,7 +37,8 @@ function splitLeaderName(value: string): [string, string] {
   return [value.slice(0, open), value.slice(open + 1).replace(/）$/, '')];
 }
 
-export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSong, breakdown }: TeamRowProps) {
+export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSong,
+                         onCompare, compareLabel, breakdown }: TeamRowProps) {
   const [open, setOpen] = useState(false);
   const share = best > 0 ? value / best : 0;
 
@@ -61,6 +65,11 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
             <button type="button" className="team-why" aria-expanded={open}
                     onClick={() => setOpen((value) => !value)}>
               {open ? '收合組成' : '這個數字怎麼來的'}
+            </button>
+          )}
+          {onCompare && (
+            <button type="button" className="team-compare" onClick={onCompare}>
+              比較 {compareLabel}
             </button>
           )}
           {onOpenSong && (

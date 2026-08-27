@@ -41,6 +41,14 @@ export interface ResolvedRun {
   stamp: number;
 }
 
+/** One side of the compare page: five cards and the Outfit lending its skill. */
+export interface ComparePick {
+  members: CardJson[];
+  leader: LeaderJson;
+  /** Where it came from, e.g. "最佳化 #3" -- shown above the column. */
+  source: string;
+}
+
 /** Where the card list currently in use came from. */
 export type DataOrigin = 'bundled' | 'upstream';
 
@@ -67,6 +75,14 @@ export interface AppState {
   importInventory: (text: string) => void;
   run: ResolvedRun | null;
   setRun: (run: ResolvedRun | null) => void;
+  /** The chart the song page and the compare page share. */
+  songKey: string;
+  setSongKey: (key: string) => void;
+  /** A and B. Both pages read this, so a pick survives navigating away. */
+  compare: [ComparePick | null, ComparePick | null];
+  /** Fill A, then B, then start over at A. */
+  pushCompare: (pick: ComparePick) => number;
+  setCompareSlot: (slot: number, pick: ComparePick | null) => void;
 }
 
 export function useAppState(): AppState {
@@ -81,6 +97,8 @@ export function useAppState(): AppState {
   const [stamp, setStamp] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [run, setRun] = useState<ResolvedRun | null>(null);
+  const [songKey, setSongKey] = useState('');
+  const [compare, setCompare] = useState<[ComparePick | null, ComparePick | null]>([null, null]);
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL;
@@ -193,6 +211,26 @@ export function useAppState(): AppState {
     [bundle, inventory],
   );
 
+  // Filling the empty slot first is what a player means by "add this one too";
+  // once both are full the next pick replaces A, so B stays the fixed baseline.
+  const pushCompare = useCallback((pick: ComparePick) => {
+    const slot = compare[0] === null ? 0 : compare[1] === null ? 1 : 0;
+    setCompare((previous) => {
+      const next: [ComparePick | null, ComparePick | null] = [previous[0], previous[1]];
+      next[slot] = pick;
+      return next;
+    });
+    return slot;
+  }, [compare]);
+
+  const setCompareSlot = useCallback((slot: number, pick: ComparePick | null) => {
+    setCompare((previous) => {
+      const next: [ComparePick | null, ComparePick | null] = [previous[0], previous[1]];
+      next[slot] = pick;
+      return next;
+    });
+  }, []);
+
   const bloomOf = useCallback(
     (cardId: string) => inventory.get(cardId)?.bloom ?? 0,
     [inventory],
@@ -203,5 +241,7 @@ export function useAppState(): AppState {
     inventory, stamp, owned, unlockedLeaders, bloomOf,
     patch, bulk, replaceInventory, exportInventory, importInventory,
     run, setRun,
+    songKey, setSongKey,
+    compare, pushCompare, setCompareSlot,
   };
 }

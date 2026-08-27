@@ -9,8 +9,10 @@ import { PinPicker } from '../ui/PinPicker';
 import { TeamRow } from '../ui/TeamRow';
 import type { AppState } from '../lib/appState';
 
-export function OptimizerPage({ state, onOpenSong }: { state: AppState; onOpenSong: (index: number) => void }) {
-  const { bundle, images, owned, unlockedLeaders, inventory, stamp, run } = state;
+export function OptimizerPage({ state, onOpenSong, onCompare }: {
+  state: AppState; onOpenSong: (index: number) => void; onCompare: () => void;
+}) {
+  const { bundle, images, owned, unlockedLeaders, inventory, stamp, run, compare, pushCompare } = state;
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string[]>([]);
@@ -193,7 +195,15 @@ export function OptimizerPage({ state, onOpenSong }: { state: AppState; onOpenSo
               <TeamRow key={row.rank} rank={row.rank} value={row.value} members={row.members}
                        leader={row.leader} imageUrl={imageUrl} best={run.rows[0]?.value ?? 0}
                        breakdown={row.breakdown}
-                       onOpenSong={() => onOpenSong(row.rank - 1)} />
+                       onOpenSong={() => onOpenSong(row.rank - 1)}
+                       compareLabel={compare[0] === null ? '→ A' : compare[1] === null ? '→ B' : '→ A'}
+                       onCompare={() => {
+                         pushCompare({
+                           members: row.members, leader: row.leader,
+                           source: `最佳化 #${row.rank}`,
+                         });
+                         onCompare();
+                       }} />
             ))}
           </div>
         </section>

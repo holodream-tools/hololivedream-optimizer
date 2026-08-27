@@ -5,8 +5,8 @@ import { expectedIndexOf, leaderPowerAndSupport, makeMemberState, memberPart } f
 import { attributeStyle } from '../ui/theme';
 import type { AppState } from '../lib/appState';
 
-export function ManualTeamPage({ state }: { state: AppState }) {
-  const { bundle, images, owned, unlockedLeaders, inventory } = state;
+export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompare: () => void }) {
+  const { bundle, images, owned, unlockedLeaders, inventory, compare, pushCompare } = state;
   const [picked, setPicked] = useState<string[]>([]);
   const [leaderId, setLeaderId] = useState('');
   const [query, setQuery] = useState('');
@@ -88,6 +88,17 @@ export function ManualTeamPage({ state }: { state: AppState }) {
         <input type="search" value={query} placeholder="搜尋持有卡"
                onChange={(event) => setQuery(event.target.value)} />
         <button onClick={() => setPicked([])} disabled={!picked.length}>清空</button>
+        <button
+          disabled={!evaluation || evaluation.duplicate}
+          onClick={() => {
+            if (!evaluation || evaluation.duplicate) return;
+            pushCompare({
+              members: evaluation.members, leader: evaluation.leader, source: '自選隊伍',
+            });
+            onCompare();
+          }}>
+          比較 {compare[0] === null ? '→ A' : compare[1] === null ? '→ B' : '→ A'}
+        </button>
       </div>
 
       {evaluation?.duplicate && <p className="error">同一位成員不能在隊伍中重複上場。</p>}

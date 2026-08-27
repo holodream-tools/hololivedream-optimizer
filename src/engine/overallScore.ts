@@ -30,10 +30,20 @@ export interface MemberState {
   effectProbabilities: Float64Array;
   typeCounts: Map<string, number>;
   generationCounts: Map<string, number>;
+  /**
+   * How many members this state currently holds. Five for every ranking path;
+   * four only for the compare page's leave-one-out, which measures a member's
+   * absence through this same formula rather than a second copy of it.
+   */
+  count: number;
   memberPower: number;      // base parameters plus the Passive increment
   staticSupport: number;
   specialSupport: number;
   activeScoreUp: number;
+  /** Summed Skill Activation Rate Up, the value the Active probabilities used. */
+  sarPoints: number;
+  /** How many entries of effectValues/effectProbabilities are live. */
+  effectCount: number;
 }
 
 export function makeMemberState(): MemberState {
@@ -44,8 +54,9 @@ export function makeMemberState(): MemberState {
     recipients: new Int32Array(5), eligible: new Int32Array(5),
     effectValues: new Float64Array(5), effectProbabilities: new Float64Array(5),
     typeCounts: new Map(), generationCounts: new Map(),
-    memberPower: 0,
+    count: 5, memberPower: 0,
     staticSupport: 0, specialSupport: 0, activeScoreUp: 0,
+    sarPoints: 0, effectCount: 0,
   };
 }
 
@@ -96,9 +107,11 @@ export function activeConditionMet(condition: unknown, typeCounts: Map<string, n
 
 export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state: MemberState): MemberState {
   const { rows, base, rates, totals, supports, statKeys, typeCounts, generationCounts } = state;
+  const count = indices.length;
+  state.count = count;
   typeCounts.clear();
   generationCounts.clear();
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < count; i++) {
     const f = facts[indices[i]];
     rows[i] = f;
     base[i * 3] = f.performance; base[i * 3 + 1] = f.technique; base[i * 3 + 2] = f.sense;
@@ -110,11 +123,11 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
 
   // Owner order comes from the base totals, exactly as the reference does.
   const order = state.order;
-  for (let i = 0; i < 5; i++) order[i] = i;
-  sortByKey(order, 5, totals);
+  for (let i = 0; i < count; i++) order[i] = i;
+  sortByKey(order, count, totals);
 
   const { recipients, eligible } = state;
-  for (let oi = 0; oi < 5; oi++) {
+  for (let oi = 0; oi < count; oi++) {
     const owner = order[oi];
     const row = rows[owner];
     const effect = row.passiveEffect;
@@ -132,10 +145,10 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
       let eligibleCount = 0;
       if ('type_match' in target && target.type_match !== undefined) {
         const wanted = String(target.type_match).toLowerCase();
-        for (let i = 0; i < 5; i++) if (rows[i].type === wanted) eligible[eligibleCount++] = i;
+        for (let i = 0; i < count; i++) if (rows[i].type === wanted) eligible[eligibleCount++] = i;
       } else if ('group' in target && target.group !== undefined) {
         const wanted = target.group;
-        for (let i = 0; i < 5; i++) if (rows[i].generation === wanted) eligible[eligibleCount++] = i;
+        for (let i = 0; i < count; i++) if (rows[i].generation === wanted) eligible[eligibleCount++] = i;
       }
       // Recipients rank on BASE parameters: on the parameter the effect raises
       // for a single-stat effect, on the base total otherwise. Nothing an
@@ -143,7 +156,7 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
       if (slot === undefined) {
         sortByKey(eligible, eligibleCount, totals);
       } else {
-        for (let i = 0; i < 5; i++) statKeys[i] = base[i * 3 + slot];
+        for (let i = 0; i < count; i++) statKeys[i] = base[i * 3 + slot];
         sortByKey(eligible, eligibleCount, statKeys);
       }
       recipientCount = Math.min(target.count ?? 0, eligibleCount);
@@ -166,8 +179,8 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
 
   // Each member's own increment, rounded up once per parameter.
   let memberPower = 0;
-  for (let i = 0; i < 5; i++) memberPower += totals[i];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < count; i++) memberPower += totals[i];
+  for (let i = 0; i < count; i++) {
     for (let k = 0; k < 3; k++) {
       const rate = rates[i * 3 + k];
       if (rate) memberPower += Math.ceil(base[i * 3 + k] * rate / 100);
@@ -179,7 +192,7 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
   // average is sum(rate x duration) / song. A gated Rate Up goes through the
   // same test as a gated Active value.
   let staticSupport = 0, specialSupport = 0, sarPoints = 0;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < count; i++) {
     staticSupport += supports[i];
     specialSupport += rows[i].specialSupportAverage;
     const rateCondition = rows[i].specialRateCondition;
@@ -191,7 +204,7 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
 
   const { effectValues, effectProbabilities } = state;
   let effectCount = 0;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < count; i++) {
     const f = rows[i];
     if (!f.activePresent) continue;
     const probability = Math.min(1, f.activeProbability * (1 + sarPoints / 100));
@@ -208,13 +221,23 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
 
   state.staticSupport = staticSupport;
   state.specialSupport = specialSupport;
+  state.sarPoints = sarPoints;
+  state.effectCount = effectCount;
   state.activeScoreUp = expectedMaximum(effectValues, effectProbabilities, effectCount);
   return state;
 }
 
-/** Apply one Outfit as a separate additive term over the base parameters. */
-export function leaderPowerAndSupport(payload: OutfitPayload | null, state: MemberState): [number, number] {
+/**
+ * Apply one Outfit as a separate additive term over the base parameters.
+ *
+ * `perMember` is an optional out-parameter for the compare page, which needs
+ * each member's own increment. The ranking path passes nothing and pays one
+ * branch per member for it, rather than a second copy of the rounding rule.
+ */
+export function leaderPowerAndSupport(payload: OutfitPayload | null, state: MemberState,
+                                      perMember?: Float64Array): [number, number] {
   if (!payload || !conditionMet(payload.condition, state.typeCounts, state.generationCounts)) {
+    if (perMember) perMember.fill(0);
     return [state.memberPower, 0];
   }
   const effects = payload.effects ?? [];
@@ -233,13 +256,17 @@ export function leaderPowerAndSupport(payload: OutfitPayload | null, state: Memb
   }
   // Each member rounds up on its own parameter, the level the reference
   // simulator uses and the only one that can produce per-member figures.
-  const { base } = state;
+  const { base, count } = state;
   let total = state.memberPower;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < count; i++) {
     const at = i * 3;
-    if (rp) total += Math.ceil(base[at] * rp / 100);
-    if (rt) total += Math.ceil(base[at + 1] * rt / 100);
-    if (rs) total += Math.ceil(base[at + 2] * rs / 100);
+    // Integer increments, so grouping them per member cannot move a bit.
+    let gain = 0;
+    if (rp) gain += Math.ceil(base[at] * rp / 100);
+    if (rt) gain += Math.ceil(base[at + 1] * rt / 100);
+    if (rs) gain += Math.ceil(base[at + 2] * rs / 100);
+    total += gain;
+    if (perMember) perMember[i] = gain;
   }
   return [total, support];
 }

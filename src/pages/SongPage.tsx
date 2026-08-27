@@ -32,8 +32,10 @@ const SORTS: ReadonlyArray<readonly [SongSort, string]> = [
 ];
 
 export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: number | null }) {
-  const { bundle, images, charts, chartBlob, chartsLoading, loadCharts, run, inventory } = state;
-  const [chartKey, setChartKey] = useState('');
+  const {
+    bundle, images, charts, chartBlob, chartsLoading, loadCharts, run, inventory,
+    songKey: chartKey, setSongKey: setChartKey,
+  } = state;
   const [query, setQuery] = useState('');
   const [difficulty, setDifficulty] = useState('Expert');
   const [sort, setSort] = useState<SongSort>('level');

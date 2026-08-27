@@ -140,6 +140,21 @@ function conditionMet(condition: unknown, rows: CardFacts[], combo: number): boo
   return false;
 }
 
+/** Per-member coverage on this chart, built only when the caller asks for it. */
+export interface ChartMemberDetail {
+  /** Which Special slot this member stands in. */
+  slot: number;
+  /** Share of the chart's notes inside this member's Special window. */
+  specialCoverage: number;
+  specialSupport: number;
+  /** Skill Activation Rate Up this Special contributed, 0 when gated off. */
+  specialRate: number;
+  /** Expected share of notes under this member's Active, probability included. */
+  activeCoverage: number;
+  /** Largest Score UP this member's Active can apply on this chart. */
+  activeScoreUp: number;
+}
+
 export interface ChartScoreResult {
   projectedScore: number;
   totalPower: number;
@@ -147,17 +162,25 @@ export interface ChartScoreResult {
   scoreRatio: number;
   ratioSource: string;
   activeBonus: number;
+  /** Present only when projectedScore was called with `wantDetail`. */
+  members?: ChartMemberDetail[];
 }
 
+/**
+ * `memberIndices` carries one member per Special slot, in standing order. It is
+ * five for every ranking and song path; the compare page's leave-one-out passes
+ * four, which stand in the chart's first four Special slots.
+ */
 export function projectedScore(
   facts: CardFacts[], memberIndices: ArrayLike<number>,
   outfitPayload: OutfitPayload | null, prepared: PreparedChart,
-  state?: MemberState,
+  state?: MemberState, wantDetail = false,
 ): ChartScoreResult {
   const working = state ?? makeMemberState();
   if (!state) memberPart(facts, memberIndices, working);
+  const count = memberIndices.length;
   const rows: CardFacts[] = [];
-  for (let i = 0; i < 5; i++) rows.push(facts[memberIndices[i]]);
+  for (let i = 0; i < count; i++) rows.push(facts[memberIndices[i]]);
 
   const [totalPower, leaderSupport] = leaderPowerAndSupport(outfitPayload, working);
   const times = prepared.times;
@@ -165,6 +188,7 @@ export function projectedScore(
   const empty: ChartScoreResult = {
     projectedScore: 0, totalPower, perfectNoteScore: 0,
     scoreRatio: prepared.scoreRatio, ratioSource: prepared.ratioSource, activeBonus: 0,
+    members: wantDetail ? [] : undefined,
   };
   if (noteCount === 0 || totalPower <= 0) return empty;
 
@@ -175,7 +199,7 @@ export function projectedScore(
   // Special windows: member i takes the i-th Special slot.
   const specialStart = new Float64Array(5), specialEnd = new Float64Array(5);
   const specialSupport = new Float64Array(5), specialRate = new Float64Array(5);
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < count; i++) {
     const row = rows[i];
     const start = prepared.specialTimes[i];
     const comboBefore = bisectLeft(times, start, noteCount);
@@ -187,7 +211,7 @@ export function projectedScore(
 
   // Active windows: one check every `interval` seconds, up to the last note.
   const activeWindows: Array<Float64Array[]> = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < count; i++) {
     const row = rows[i];
     const starts: number[] = [], ends: number[] = [], magnitudes: number[] = [], probabilities: number[] = [];
     const interval = row.activeInterval, duration = row.activeDuration;
@@ -195,7 +219,7 @@ export function projectedScore(
     while (interval > 0 && duration > 0 && check <= prepared.lastTime) {
       const comboBefore = bisectLeft(times, check, noteCount);
       let rate = 0;
-      for (let s = 0; s < 5; s++) if (specialStart[s] <= check && check < specialEnd[s]) rate += specialRate[s];
+      for (let s = 0; s < count; s++) if (specialStart[s] <= check && check < specialEnd[s]) rate += specialRate[s];
       let magnitude = row.activeScoreUp;
       if (row.activeConditionalScoreUp !== null && conditionMet(row.activeCondition, rows, comboBefore)) {
         magnitude = row.activeConditionalScoreUp;
@@ -211,9 +235,32 @@ export function projectedScore(
     ]);
   }
 
+  const detail: ChartMemberDetail[] | undefined = wantDetail ? [] : undefined;
+  if (detail) {
+    for (let i = 0; i < count; i++) {
+      const [starts, ends, magnitudes, probabilities] = activeWindows[i];
+      let expectedNotes = 0, magnitude = 0;
+      for (let w = 0; w < starts.length; w++) {
+        const notes = bisectLeft(times, ends[w], noteCount) - bisectLeft(times, starts[w], noteCount);
+        expectedNotes += notes * probabilities[w];
+        if (magnitudes[w] > magnitude) magnitude = magnitudes[w];
+      }
+      const specialNotes = bisectLeft(times, specialEnd[i], noteCount)
+        - bisectLeft(times, specialStart[i], noteCount);
+      detail.push({
+        slot: i,
+        specialCoverage: specialNotes / noteCount,
+        specialSupport: specialSupport[i],
+        specialRate: specialRate[i],
+        activeCoverage: Math.min(1, expectedNotes / noteCount),
+        activeScoreUp: magnitude,
+      });
+    }
+  }
+
   // The multiplier only changes where a window opens or closes.
   const boundarySet = new Set<number>([0]);
-  for (let i = 0; i < 5; i++) { boundarySet.add(specialStart[i]); boundarySet.add(specialEnd[i]); }
+  for (let i = 0; i < count; i++) { boundarySet.add(specialStart[i]); boundarySet.add(specialEnd[i]); }
   for (const [starts, ends] of activeWindows) {
     for (let i = 0; i < starts.length; i++) { boundarySet.add(starts[i]); boundarySet.add(ends[i]); }
   }
@@ -232,10 +279,10 @@ export function projectedScore(
     const base = midValue * (prepared.midPrefix[last] - prepared.midPrefix[first])
       + perfect * (prepared.normalPrefix[last] - prepared.normalPrefix[first]);
     let support = 0;
-    for (let s = 0; s < 5; s++) if (specialStart[s] <= low && low < specialEnd[s]) support += specialSupport[s];
+    for (let s = 0; s < count; s++) if (specialStart[s] <= low && low < specialEnd[s]) support += specialSupport[s];
 
     let effectCount = 0;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < count; i++) {
       const [starts, ends, magnitudes, probabilities] = activeWindows[i];
       let misses = 1, magnitude = 0;
       for (let w = 0; w < starts.length; w++) {
@@ -263,5 +310,6 @@ export function projectedScore(
     scoreRatio: prepared.scoreRatio,
     ratioSource: prepared.ratioSource,
     activeBonus: baselineScore ? (weightedTotal / baselineScore - 1) * 100 : 0,
+    members: detail,
   };
 }
