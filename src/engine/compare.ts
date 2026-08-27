@@ -6,9 +6,17 @@
  * the song page call, so a comparison can never disagree with the leaderboard
  * that produced it.
  *
- * The leave-one-out figures are counterfactuals, not scores of a legal team:
- * a four-member evaluation asks what the rest of the team is worth once one
- * member takes no part in anything. See LEAVE_ONE_OUT_NOTE.
+ * The leave-one-out figures are counterfactuals, not scores of a legal team.
+ * A member who is left out contributes nothing at all: not their parameters,
+ * not their attribute or generation to a count, not the Passive they supply,
+ * not the Passive they would receive, not their Active, not their Special.
+ * The four who remain re-resolve every Passive target and every condition from
+ * scratch. The Outfit itself stays -- it is a separate slot, not a sixth member
+ * -- but its own condition is re-tested against the four, so an Outfit that
+ * needed the departed member falls away with them.
+ *
+ * Consequently the five figures do not sum to the team's score, and nothing
+ * should present them as if they did.
  */
 import {
   activeConditionMet, expectedIndexOf, leaderPowerAndSupport, makeMemberState, memberPart,
@@ -16,12 +24,6 @@ import {
 import { projectedScore } from './chartScore';
 import type { CardFacts, OutfitPayload } from './types';
 import type { ChartMemberDetail, ChartScoreResult, PreparedChart } from './chartScore';
-
-export const LEAVE_ONE_OUT_NOTE =
-  '移除影響是反事實評估，不是合法四人隊的分數：該成員的三圍、屬性與世代人數、'
-  + 'Passive 的提供與受益、Active、Special 全部不參與，其餘成員的 Passive 受益者與'
-  + '條件全部重新判定。Outfit 本身保留，但它的發動條件依剩餘四人重新判定。'
-  + '五個人的數字不會、也不應該加總等於總分。';
 
 /** Team-level figures, all read off one member evaluation. */
 export interface GenericView {

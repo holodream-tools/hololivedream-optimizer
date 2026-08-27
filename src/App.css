@@ -602,5 +602,6 @@ button:disabled { opacity: .45; cursor: default; }
 .cmp-direct dt { font-size: 11px; color: var(--ink-3); }
 .cmp-direct dd { margin: 0; font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .cmp-order { margin: 10px 0 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.6; }
+.cmp-members-note { margin-bottom: 10px; }
 .cmp-members + .metric-note { margin-top: 16px; }
 .metric-note + .metric-note { margin-top: 8px; }

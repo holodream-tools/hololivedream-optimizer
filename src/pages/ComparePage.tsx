@@ -7,8 +7,7 @@
  */
 import { useMemo, useState } from 'react';
 import {
-  LEAVE_ONE_OUT_NOTE, bestOrder, genericView, leaveOneOutChart, leaveOneOutGeneric,
-  singleDifference,
+  bestOrder, genericView, leaveOneOutChart, leaveOneOutGeneric, singleDifference,
 } from '../engine/compare';
 import { materialize, prepare } from '../engine/chartScore';
 import { cardFacts, outfitTable } from '../engine/precompute';
@@ -237,6 +236,9 @@ export function ComparePage({ state }: { state: AppState }) {
             )}
           </section>
 
+          <p className="metric-note cmp-members-note">
+            <b>移除影響</b>：少了這張卡，這一隊會掉多少分。剩下四人的加成、條件與站位都會重新計算，所以五個數字加起來不等於總分。
+          </p>
           <div className="cmp-members">
             {SIDE.map((name, slot) => {
               const side = sides[slot]!;
@@ -297,10 +299,8 @@ export function ComparePage({ state }: { state: AppState }) {
             })}
           </div>
 
-          <p className="metric-note">{LEAVE_ONE_OUT_NOTE}</p>
           <p className="metric-note">
-            兩隊差距在數個百分點以內時要小心：Passive 之間相加、以及「隊伍中有 N 名某屬性」這類效果選誰受益的規則，
-            目前尚未以遊戲實測確認，差距可能落在模型誤差內而不是真的強弱。
+            兩隊差距在 1–2% 以內時，不足以判斷誰真的比較強——有幾項加成規則還沒經過遊戲內實測。
           </p>
         </>
       )}
