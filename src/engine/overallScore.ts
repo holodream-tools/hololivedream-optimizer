@@ -105,7 +105,14 @@ export function activeConditionMet(condition: unknown, typeCounts: Map<string, n
   return false;
 }
 
-export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state: MemberState): MemberState {
+/**
+ * `sarOverride` replaces the summed Skill Activation Rate Up for this one
+ * evaluation. The ranking never passes it; the compare page passes 0 to obtain
+ * the same team's Active expectation with SAR removed, which is what lets the
+ * attribution separate SAR from Active without a second copy of the formula.
+ */
+export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state: MemberState,
+                           sarOverride?: number): MemberState {
   const { rows, base, rates, totals, supports, statKeys, typeCounts, generationCounts } = state;
   const count = indices.length;
   state.count = count;
@@ -201,6 +208,8 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
       sarPoints += rows[i].specialSarAverage;
     }
   }
+
+  if (sarOverride !== undefined) sarPoints = sarOverride;
 
   const { effectValues, effectProbabilities } = state;
   let effectCount = 0;

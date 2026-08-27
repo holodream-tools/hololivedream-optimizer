@@ -9,11 +9,13 @@ import { useMemo, useState } from 'react';
 import {
   bestOrder, genericView, leaveOneOutChart, leaveOneOutGeneric, singleDifference,
 } from '../engine/compare';
+import { attributeChart, attributeGeneric } from '../engine/attribution';
 import { materialize, prepare } from '../engine/chartScore';
 import { cardFacts, outfitTable } from '../engine/precompute';
 import { attributeStyle } from '../ui/theme';
 import type { AppState, ComparePick } from '../lib/appState';
 import type { BestOrder, GenericView } from '../engine/compare';
+import type { AttributionReport, AttributionRow } from '../engine/attribution';
 
 const SIDE = ['A', 'B'] as const;
 
@@ -23,6 +25,8 @@ interface Side {
   generic: GenericView;
   loo: number[];
   chart: BestOrder | null;
+  /** The same team evaluated in its best standing order, for the song report. */
+  chartView: GenericView | null;
   chartLoo: number[] | null;
 }
 
@@ -53,6 +57,56 @@ function DiffRow({ label, a, b, format, hint }: {
         )}
       </td>
     </tr>
+  );
+}
+
+/**
+ * One decomposition, read top to bottom.
+ *
+ * The bar is centred: to the right means A gained there, to the left means B
+ * did. Bar length is relative to the largest row, so the shape says which one
+ * or two things decided the match.
+ */
+function AttributionPanel({ title, report, note }: {
+  title: string; report: AttributionReport; note?: string;
+}) {
+  const widest = Math.max(1e-9, ...report.rows.map((row) => Math.abs(row.percent)));
+  const value = (row: AttributionRow, side: 'a' | 'b') => {
+    const raw = side === 'a' ? row.a : row.b;
+    if (row.unit === 'points') return Math.round(raw).toLocaleString();
+    if (row.unit === 'percent') return `${raw.toFixed(1)}%`;
+    return raw.toFixed(1);
+  };
+  return (
+    <section className="attrib">
+      <h3>{title}</h3>
+      <p className="attrib-total">
+        {report.gap === 0 ? '兩隊相同' : (
+          <>
+            <b>{report.gap > 0 ? 'A' : 'B'}</b> 高{' '}
+            <b className="attrib-gap">{Math.abs(report.gap).toFixed(2)}%</b>
+            {'　'}（{report.aTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {' vs '}{report.bTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}）
+          </>
+        )}
+      </p>
+      <ul className="attrib-rows">
+        {report.rows.map((row) => (
+          <li key={row.label}>
+            <span className="attrib-label">{row.label}</span>
+            <span className="attrib-bar" aria-hidden="true">
+              <i className={row.percent >= 0 ? 'is-a' : 'is-b'}
+                 style={{ width: `${(Math.abs(row.percent) / widest) * 50}%` }} />
+            </span>
+            <b className={row.percent >= 0 ? 'is-a' : 'is-b'}>
+              {row.percent >= 0 ? '+' : '−'}{Math.abs(row.percent).toFixed(2)}%
+            </b>
+            <span className="attrib-values">{value(row, 'a')} / {value(row, 'b')}</span>
+          </li>
+        ))}
+      </ul>
+      {note && <p className="metric-note">{note}</p>}
+    </section>
   );
 }
 
@@ -93,12 +147,24 @@ export function ComparePage({ state }: { state: AppState }) {
       generic: genericView(facts, indices, payload),
       loo: leaveOneOutGeneric(facts, indices, payload),
       chart: best,
+      chartView: best ? genericView(facts, best.order, payload) : null,
       chartLoo: best && chart
         ? leaveOneOutChart(facts, indices, payload, chart.prepared, best.score) : null,
     };
   }), [compare, inventory, chart]);
 
   const [a, b] = sides;
+
+  const genericAttribution = useMemo(
+    () => (a && b ? attributeGeneric(a.generic, b.generic) : null), [a, b]);
+  const chartAttribution = useMemo(() => {
+    if (!a?.chart || !b?.chart || !a.chartView || !b.chartView || !chart) return null;
+    return attributeChart(
+      { view: a.chartView, detail: a.chart.detail, score: a.chart.score },
+      { view: b.chartView, detail: b.chart.detail, score: b.chart.score },
+      chart.prepared,
+    );
+  }, [a, b, chart]);
   const swap = useMemo(() => {
     if (!a || !b) return null;
     const names = new Map<string, string>();
@@ -216,6 +282,16 @@ export function ComparePage({ state }: { state: AppState }) {
           </table>
           </div>
 
+          {genericAttribution && (
+            <AttributionPanel
+              title="差異歸因 · 綜合推薦指數"
+              report={genericAttribution}
+              note={'這是「歸因貢獻」，不是遊戲提供的數值：指數是乘積，百分比本來不能相加，'
+                + '所以這裡用對數分解把總差距拆到各項，各項相加剛好等於上面的總差距。'
+                + 'Score Support 沒有獨立分數，只放大有發動的 Active，因此兩者的交互項算在 Support 上。'}
+            />
+          )}
+
           <section className="cmp-songbar">
             {charts ? (
               <label>
@@ -239,6 +315,46 @@ export function ComparePage({ state }: { state: AppState }) {
           <p className="metric-note cmp-members-note">
             <b>移除影響</b>：少了這張卡，這一隊會掉多少分。剩下四人的加成、條件與站位都會重新計算，所以五個數字加起來不等於總分。
           </p>
+          {chartAttribution && chart && (
+            <>
+              <AttributionPanel
+                title={`差異歸因 · ${chart.meta.title}`}
+                report={chartAttribution}
+                note={'歌曲模式把 Active、Special、SAR 與 Score Support 在每個音符當下套用，'
+                  + '沒有可以拆開的乘積結構，所以它們合成「本曲技能實際貢獻」一項；'
+                  + '下面的覆蓋率是解釋這一項落在哪裡的診斷，不是歸因項，也不要和時間軸上的 ↑ 箭頭混用'
+                  + '——那個箭頭比的是覆蓋到的音符值不值錢，與這裡的貢獻百分比是兩回事。'}
+              />
+              <div className="cmp-scroll">
+                <table className="cmp-table">
+                  <thead>
+                    <tr>
+                      {/* Five members' windows overlap, so these sum past 100%. */}
+                      <th scope="col">本曲覆蓋（五人合計，可重疊故可能超過 100%）</th>
+                      <th scope="col">A</th><th scope="col">B</th><th scope="col">差距</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {([
+                      ['Active 時間覆蓋', 'activeTimeCoverage'],
+                      ['Active 音符覆蓋', 'activeNoteCoverage'],
+                      ['Active 分數覆蓋', 'activeScoreCoverage'],
+                      ['Special 音符覆蓋', 'specialNoteCoverage'],
+                      ['Special 分數覆蓋', 'specialScoreCoverage'],
+                    ] as const).map(([label, key]) => {
+                      const total = (side: Side) => (side.chart?.detail.members ?? [])
+                        .reduce((sum, member) => sum + member[key], 0);
+                      return (
+                        <DiffRow key={key} label={label} a={total(a)} b={total(b)}
+                                 format={(value) => `${(value * 100).toFixed(1)}%`} />
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
           <div className="cmp-members">
             {SIDE.map((name, slot) => {
               const side = sides[slot]!;

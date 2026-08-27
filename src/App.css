@@ -664,3 +664,33 @@ button:disabled { opacity: .45; cursor: default; }
 .song-rank-table tbody tr:hover { background: var(--surface-2); }
 .song-rank-table tbody tr.is-picked { background: var(--brand-soft); }
 .song-rank-table tbody tr.is-picked th { color: var(--brand); font-weight: 750; }
+
+/* ---- attribution ----
+   Which side gained, where, and by how much. The bar is centred so the shape of
+   the list answers "why" before any number is read. */
+.attrib { margin: 0 0 22px; }
+.attrib h3 { margin: 0 0 3px; font-size: 14px; font-weight: 700; }
+.attrib-total { margin: 0 0 10px; font-size: 13px; color: var(--ink-3); }
+.attrib-total b { color: var(--ink-2); }
+.attrib-total .attrib-gap { color: var(--brand); font-size: 15px; font-variant-numeric: tabular-nums; }
+.attrib-rows { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 3px; }
+.attrib-rows li { display: grid; align-items: center; gap: 10px;
+                  grid-template-columns: minmax(120px, 1.1fr) minmax(90px, 2fr) 74px minmax(80px, .9fr);
+                  padding: 3px 0; border-bottom: 1px dotted var(--line); }
+.attrib-label { font-size: 12.5px; color: var(--ink-2); }
+.attrib-bar { position: relative; height: 11px; background: var(--surface-2);
+              border-radius: 3px; overflow: hidden; }
+.attrib-bar::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0;
+                      width: 1px; background: var(--line); }
+.attrib-bar i { position: absolute; top: 1px; bottom: 1px; border-radius: 2px; }
+.attrib-bar i.is-a { left: 50%; background: var(--brand); }
+.attrib-bar i.is-b { right: 50%; background: var(--ink-3); }
+.attrib-rows b { font-size: 12.5px; font-variant-numeric: tabular-nums; text-align: right; }
+.attrib-rows b.is-a { color: var(--brand); }
+.attrib-rows b.is-b { color: var(--ink-2); }
+.attrib-values { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums;
+                 text-align: right; }
+@media (max-width: 640px) {
+  .attrib-rows li { grid-template-columns: 1fr 64px; }
+  .attrib-bar, .attrib-values { display: none; }
+}

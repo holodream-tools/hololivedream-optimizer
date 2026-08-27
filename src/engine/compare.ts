@@ -37,6 +37,11 @@ export interface GenericView {
   sarPoints: number;
   activeScoreUp: number;
   /**
+   * The same Active expectation with SAR removed. Their difference is what SAR
+   * bought, which the attribution needs and the score itself never separates.
+   */
+  activeScoreUpNoSar: number;
+  /**
    * Probability that at least one Active is up, i.e. 1 - prod(1 - p).
    *
    * A TIME coverage: the generic model has no chart, so it can only say what
@@ -117,6 +122,8 @@ function directEffects(state: ReturnType<typeof makeMemberState>,
 export function genericView(facts: CardFacts[], indices: ArrayLike<number>,
                             payload: OutfitPayload | null): GenericView {
   const state = memberPart(facts, indices, makeMemberState());
+  // A second pass on its own state: same members, same everything, SAR set to 0.
+  const withoutSar = memberPart(facts, indices, makeMemberState(), 0).activeScoreUp;
   const [totalPower, leaderSupport] = leaderPowerAndSupport(payload, state, scratchOutfit);
 
   let basePower = 0;
@@ -134,6 +141,7 @@ export function genericView(facts: CardFacts[], indices: ArrayLike<number>,
     specialSupport: state.specialSupport,
     sarPoints: state.sarPoints,
     activeScoreUp: state.activeScoreUp,
+    activeScoreUpNoSar: withoutSar,
     activeTimeCoverage: state.effectCount ? 1 - misses : 0,
     index: expectedIndexOf(payload, state),
     members: directEffects(state, scratchOutfit),
