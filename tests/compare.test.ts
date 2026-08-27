@@ -132,14 +132,22 @@ describe('leave-one-out on a chart', () => {
     }
   });
 
-  it('reports per-member chart coverage for the winning order', () => {
+  it('reports all three coverages, and they are genuinely three numbers', () => {
     const full = bestOrder(facts, team, payload, prepared);
     expect(full.detail.members).toHaveLength(5);
+    let differ = 0;
     for (const member of full.detail.members!) {
-      expect(member.specialCoverage).toBeGreaterThanOrEqual(0);
-      expect(member.specialCoverage).toBeLessThanOrEqual(1);
-      expect(member.activeCoverage).toBeGreaterThanOrEqual(0);
-      expect(member.activeCoverage).toBeLessThanOrEqual(1);
+      for (const share of [
+        member.specialTimeCoverage, member.specialNoteCoverage, member.specialScoreCoverage,
+        member.activeTimeCoverage, member.activeNoteCoverage, member.activeScoreCoverage,
+      ]) {
+        expect(share).toBeGreaterThanOrEqual(0);
+        expect(share).toBeLessThanOrEqual(1);
+      }
+      // Notes are not evenly spread and mid notes pay a tenth, so on a real
+      // chart the three shares must not collapse into one another.
+      if (Math.abs(member.activeNoteCoverage - member.activeScoreCoverage) > 1e-9) differ++;
     }
+    expect(differ).toBeGreaterThan(0);
   });
 });

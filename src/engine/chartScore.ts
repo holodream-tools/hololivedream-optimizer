@@ -140,17 +140,33 @@ function conditionMet(condition: unknown, rows: CardFacts[], combo: number): boo
   return false;
 }
 
-/** Per-member coverage on this chart, built only when the caller asks for it. */
+/**
+ * Per-member coverage on this chart, built only when the caller asks for it.
+ *
+ * Coverage is three different questions and they do not agree. A skill can be
+ * up for a quarter of the song, catch a fifth of its notes, and earn a tenth of
+ * its score, because notes are not spread evenly, mid notes pay a tenth of a
+ * normal note, and the Combo Bonus grows through the song. Reporting one number
+ * called "coverage" would hide exactly the thing worth seeing.
+ */
 export interface ChartMemberDetail {
   /** Which Special slot this member stands in. */
   slot: number;
-  /** Share of the chart's notes inside this member's Special window. */
-  specialCoverage: number;
+  /** Seconds the Special is up, over the song's length. */
+  specialTimeCoverage: number;
+  /** Notes inside the Special window, over the chart's note count. */
+  specialNoteCoverage: number;
+  /** Score weight inside the window, over the chart's total score weight. */
+  specialScoreCoverage: number;
   specialSupport: number;
   /** Skill Activation Rate Up this Special contributed, 0 when gated off. */
   specialRate: number;
-  /** Expected share of notes under this member's Active, probability included. */
-  activeCoverage: number;
+  /** Seconds the Active is up, probability included, over the song's length. */
+  activeTimeCoverage: number;
+  /** Expected notes under this member's Active, over the chart's note count. */
+  activeNoteCoverage: number;
+  /** Expected score weight under the Active, over the chart's total. */
+  activeScoreCoverage: number;
   /** Largest Score UP this member's Active can apply on this chart. */
   activeScoreUp: number;
 }
@@ -237,22 +253,37 @@ export function projectedScore(
 
   const detail: ChartMemberDetail[] | undefined = wantDetail ? [] : undefined;
   if (detail) {
+    // Score weight uses the same per-note values the scoring pass used, so the
+    // shares below are shares of the score actually on offer, not of a proxy.
+    const weightOf = (from: number, to: number) =>
+      midValue * (prepared.midPrefix[to] - prepared.midPrefix[from])
+      + perfect * (prepared.normalPrefix[to] - prepared.normalPrefix[from]);
+    const songSeconds = Math.max(times[noteCount - 1] - times[0], 1e-9);
+    const totalWeight = Math.max(weightOf(0, noteCount), 1e-9);
+
     for (let i = 0; i < count; i++) {
       const [starts, ends, magnitudes, probabilities] = activeWindows[i];
-      let expectedNotes = 0, magnitude = 0;
+      let expectedNotes = 0, expectedWeight = 0, expectedSeconds = 0, magnitude = 0;
       for (let w = 0; w < starts.length; w++) {
-        const notes = bisectLeft(times, ends[w], noteCount) - bisectLeft(times, starts[w], noteCount);
-        expectedNotes += notes * probabilities[w];
+        const from = bisectLeft(times, starts[w], noteCount);
+        const to = bisectLeft(times, ends[w], noteCount);
+        expectedNotes += (to - from) * probabilities[w];
+        expectedWeight += weightOf(from, to) * probabilities[w];
+        expectedSeconds += (ends[w] - starts[w]) * probabilities[w];
         if (magnitudes[w] > magnitude) magnitude = magnitudes[w];
       }
-      const specialNotes = bisectLeft(times, specialEnd[i], noteCount)
-        - bisectLeft(times, specialStart[i], noteCount);
+      const specialFrom = bisectLeft(times, specialStart[i], noteCount);
+      const specialTo = bisectLeft(times, specialEnd[i], noteCount);
       detail.push({
         slot: i,
-        specialCoverage: specialNotes / noteCount,
+        specialTimeCoverage: Math.min(1, (specialEnd[i] - specialStart[i]) / songSeconds),
+        specialNoteCoverage: (specialTo - specialFrom) / noteCount,
+        specialScoreCoverage: weightOf(specialFrom, specialTo) / totalWeight,
         specialSupport: specialSupport[i],
         specialRate: specialRate[i],
-        activeCoverage: Math.min(1, expectedNotes / noteCount),
+        activeTimeCoverage: Math.min(1, expectedSeconds / songSeconds),
+        activeNoteCoverage: Math.min(1, expectedNotes / noteCount),
+        activeScoreCoverage: Math.min(1, expectedWeight / totalWeight),
         activeScoreUp: magnitude,
       });
     }

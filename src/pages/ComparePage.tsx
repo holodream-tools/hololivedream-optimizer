@@ -202,8 +202,8 @@ export function ComparePage({ state }: { state: AppState }) {
               <DiffRow label="SAR（技能發動率）" a={a.generic.sarPoints} b={b.generic.sarPoints} format={one}
                        hint="各 Rate Up 以自身持續時間對 192 秒加權平均" />
               <DiffRow label="Active 平均效果" a={a.generic.activeScoreUp} b={b.generic.activeScoreUp} format={one} />
-              <DiffRow label="Active 覆蓋率" a={a.generic.activeCoverage} b={b.generic.activeCoverage} format={share}
-                       hint="至少一個 Active 生效的機率" />
+              <DiffRow label="Active 時間覆蓋" a={a.generic.activeTimeCoverage} b={b.generic.activeTimeCoverage}
+                       format={share} hint="至少一個 Active 生效的時間比例" />
               <DiffRow label="綜合推薦指數" a={a.generic.index} b={b.generic.index} format={int} />
               {chart && a.chart && b.chart && (
                 <>
@@ -275,11 +275,15 @@ export function ComparePage({ state }: { state: AppState }) {
                               <div><dt>Special 時間平均</dt><dd>+{one(direct.specialSupport)}</dd></div>
                               <div><dt>SAR 貢獻</dt><dd>+{one(direct.sarPoints)}</dd></div>
                               <div><dt>Active 效果</dt><dd>+{one(direct.activeScoreUp)}%</dd></div>
-                              <div><dt>Active 覆蓋</dt><dd>{share(direct.activeCoverage)}</dd></div>
+                              <div><dt>Active 時間覆蓋</dt><dd>{share(direct.activeTimeCoverage)}</dd></div>
                               {chartDetail && (
                                 <>
-                                  <div><dt>本曲 Special 覆蓋</dt><dd>{share(chartDetail.specialCoverage)}</dd></div>
-                                  <div><dt>本曲 Active 覆蓋</dt><dd>{share(chartDetail.activeCoverage)}</dd></div>
+                                  <div><dt>本曲 Special 時間</dt><dd>{share(chartDetail.specialTimeCoverage)}</dd></div>
+                                  <div><dt>本曲 Special 音符</dt><dd>{share(chartDetail.specialNoteCoverage)}</dd></div>
+                                  <div><dt>本曲 Special 分數</dt><dd>{share(chartDetail.specialScoreCoverage)}</dd></div>
+                                  <div><dt>本曲 Active 時間</dt><dd>{share(chartDetail.activeTimeCoverage)}</dd></div>
+                                  <div><dt>本曲 Active 音符</dt><dd>{share(chartDetail.activeNoteCoverage)}</dd></div>
+                                  <div><dt>本曲 Active 分數</dt><dd>{share(chartDetail.activeScoreCoverage)}</dd></div>
                                 </>
                               )}
                             </dl>

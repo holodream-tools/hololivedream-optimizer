@@ -36,8 +36,13 @@ export interface GenericView {
   specialSupport: number;
   sarPoints: number;
   activeScoreUp: number;
-  /** Probability that at least one Active is up, i.e. 1 - prod(1 - p). */
-  activeCoverage: number;
+  /**
+   * Probability that at least one Active is up, i.e. 1 - prod(1 - p).
+   *
+   * A TIME coverage: the generic model has no chart, so it can only say what
+   * fraction of the song a skill is up, never how many notes that caught.
+   */
+  activeTimeCoverage: number;
   index: number;
   members: DirectEffects[];
 }
@@ -60,7 +65,8 @@ export interface DirectEffects {
   /** This member's Skill Activation Rate Up, 0 when its condition fails. */
   sarPoints: number;
   activeScoreUp: number;
-  activeCoverage: number;
+  /** Share of the song this member's Active is up; see GenericView. */
+  activeTimeCoverage: number;
 }
 
 const scratchOutfit = new Float64Array(5);
@@ -83,10 +89,10 @@ function directEffects(state: ReturnType<typeof makeMemberState>,
       const rate = state.rates[i * 3 + k];
       if (rate) passiveGain += Math.ceil(state.base[i * 3 + k] * rate / 100);
     }
-    let activeScoreUp = 0, activeCoverage = 0;
+    let activeScoreUp = 0, activeTimeCoverage = 0;
     if (row.activePresent) {
       activeScoreUp = state.effectValues[effect];
-      activeCoverage = state.effectProbabilities[effect];
+      activeTimeCoverage = state.effectProbabilities[effect];
       effect++;
     }
     const rateCondition = row.specialRateCondition;
@@ -102,7 +108,7 @@ function directEffects(state: ReturnType<typeof makeMemberState>,
       sarPoints: row.specialSkillRateUp
         && (!rateCondition || activeConditionMet(rateCondition, state.typeCounts))
         ? row.specialSarAverage : 0,
-      activeScoreUp, activeCoverage,
+      activeScoreUp, activeTimeCoverage,
     });
   }
   return out;
@@ -128,7 +134,7 @@ export function genericView(facts: CardFacts[], indices: ArrayLike<number>,
     specialSupport: state.specialSupport,
     sarPoints: state.sarPoints,
     activeScoreUp: state.activeScoreUp,
-    activeCoverage: state.effectCount ? 1 - misses : 0,
+    activeTimeCoverage: state.effectCount ? 1 - misses : 0,
     index: expectedIndexOf(payload, state),
     members: directEffects(state, scratchOutfit),
   };
