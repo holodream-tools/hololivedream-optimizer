@@ -475,6 +475,21 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                   <p className="metric-note">
                     這個數字依實際歌曲譜面、Combo、Special、Active、SAR 等時間點逐音符計算，與「隊伍最佳化」的綜合推薦指數量綱不同，兩者不能互相比較。
                   </p>
+
+                  {/* The same component on the same detail object the score above
+                      was read from: this mode already ran all 120 orders through
+                      bestOrder, so the windows and coverages were sitting unused. */}
+                  <section className="timeline-block">
+                    <h4>
+                      Timeline 分析
+                      <span>{outcome.best.score.toLocaleString()} 分 · 最佳站位</span>
+                    </h4>
+                    <SongTimeline
+                      prepared={outcome.prepared}
+                      detail={outcome.detail}
+                      members={outcome.best.order.map((memberIndex) => team!.members[memberIndex])}
+                    />
+                  </section>
                 </>
               )}
             </div>
