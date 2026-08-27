@@ -190,7 +190,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
         <div>
           <h2>歌曲／順序</h2>
           <p className="page-sub">
-            以公開譜面計算<b>指定歌曲理論預估分（Perfect 假設）</b>，並找出最佳站位。不含玩家失誤、Board、Connect、Memory 與 Fever。
+            以公開譜面計算<b>指定歌曲理論預估分（Perfect 假設）</b>。「指定隊伍」算你挑的那一隊，「歌曲最佳化」為這首歌重新找隊伍；兩者都會試過全部 120 種站位並附上時間軸。不含玩家失誤、Board、Connect、Memory 與 Fever。
           </p>
         </div>
       </div>
