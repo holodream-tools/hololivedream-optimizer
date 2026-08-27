@@ -25,6 +25,11 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
   // the cost is indistinguishable, so the headroom is free -- and it means the
   // display count and the diversity filters are pure slicing, never a recompute.
   const KEPT = 200;
+  // Song mode funnels the generic ranking, and its deep setting needs 1000
+  // DISTINCT formations; the raw list repeats a formation once per Outfit that
+  // ties for it, so it has to be several times larger. The leaderboard still
+  // reads the first KEPT rows, unchanged.
+  const CANDIDATE_POOL = 6000;
   const abortRef = useRef<AbortController | null>(null);
   const imageUrl = (cardId: string) => images?.url(cardId);
 
@@ -48,7 +53,7 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
     setProgress({ done: 0, total: binomial(owned.length, 5) });
     try {
       const raw = await optimize({
-        facts, outfits, limit: KEPT, signal: controller.signal,
+        facts, outfits, limit: CANDIDATE_POOL, signal: controller.signal,
         required: pinnedIndices,
         onProgress: (done, total) => setProgress({ done, total }),
       });
@@ -56,7 +61,10 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
       // free of anything the ranking does not need.
       const detailState = makeMemberState();
       state.setRun({
-        rows: raw.rows.map((row) => {
+        candidates: raw.rows.map((row) => ({
+          value: row.value, members: row.members.slice(), leaderIndex: row.leaderIndex,
+        })),
+        rows: raw.rows.slice(0, KEPT).map((row) => {
           memberPart(facts, row.members, detailState);
           const payload = outfits.payloads[outfits.signatureOf[row.leaderIndex]];
           const [totalPower, leaderSupport] = leaderPowerAndSupport(payload, detailState);

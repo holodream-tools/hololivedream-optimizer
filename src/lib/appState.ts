@@ -29,6 +29,12 @@ export interface ResolvedRun {
     leader: LeaderJson;
     breakdown: TeamBreakdown;
   }>;
+  /**
+   * The same sweep, kept deeper and without the resolved detail, so song mode
+   * has candidates to funnel. The leaderboard still reads `rows`, so nothing
+   * about the ranking display depends on how deep this goes.
+   */
+  candidates: Array<{ value: number; members: number[]; leaderIndex: number }>;
   evaluations: number;
   /** Teams that passed the talent and pinned-card filters. */
   scored: number;

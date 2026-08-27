@@ -166,7 +166,8 @@ export interface BestOrder {
  * evaluated in full rather than reusing one member evaluation.
  */
 export function bestOrder(facts: CardFacts[], indices: number[],
-                          payload: OutfitPayload | null, prepared: PreparedChart): BestOrder {
+                          payload: OutfitPayload | null, prepared: PreparedChart,
+                          wantDetail = true): BestOrder {
   const state = makeMemberState();
   let best: number[] | null = null;
   let bestScore = -Infinity;
@@ -182,7 +183,7 @@ export function bestOrder(facts: CardFacts[], indices: number[],
     order: best!,
     score: bestScore,
     worst,
-    detail: projectedScore(facts, best!, payload, prepared, state, true),
+    detail: projectedScore(facts, best!, payload, prepared, state, wantDetail),
   };
 }
 

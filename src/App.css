@@ -605,3 +605,30 @@ button:disabled { opacity: .45; cursor: default; }
 .cmp-members-note { margin-bottom: 10px; }
 .cmp-members + .metric-note { margin-top: 16px; }
 .metric-note + .metric-note { margin-top: 8px; }
+
+/* ---- song mode ----
+   Two modes, not a replacement: "指定隊伍" answers a question about a team you
+   already chose, "歌曲最佳化" goes looking for a different one. */
+.mode-switch { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.mode-switch button { display: grid; gap: 2px; text-align: left; padding: 8px 14px;
+                      font-size: 13.5px; font-weight: 650; }
+.mode-switch button span { font-size: 11px; font-weight: 400; color: var(--ink-3); }
+.mode-switch button.is-on { border-color: var(--brand-line); background: var(--brand-soft);
+                            color: var(--brand); }
+.mode-switch button.is-on span { color: var(--brand); opacity: .8; }
+
+.funnel { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 14px 0 4px; }
+.funnel-depths { display: flex; gap: 5px; flex-wrap: wrap; }
+.funnel-depths button { display: grid; gap: 1px; text-align: left; padding: 6px 11px;
+                        font-size: 12.5px; font-weight: 650; }
+.funnel-depths button span { font-size: 10.5px; font-weight: 400; color: var(--ink-3); }
+.funnel-depths button.is-on { border-color: var(--accent-line, var(--brand-line));
+                              background: var(--brand-soft); color: var(--brand); }
+.funnel-depths button.is-on span { color: var(--brand); opacity: .8; }
+.funnel .runbar-progress { flex: 1; min-width: 220px; }
+
+.uplift { color: var(--brand); font-variant-numeric: tabular-nums; }
+.song-rank-table { margin-top: 16px; font-size: 12.5px; min-width: 0; }
+.song-rank-table th[scope="row"] { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.order-cell { text-align: left !important; font-size: 11.5px; color: var(--ink-3);
+              font-variant-numeric: normal; }
