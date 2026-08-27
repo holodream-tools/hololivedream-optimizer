@@ -29,8 +29,8 @@ import type { ChartScoreResult, PreparedChart } from './chartScore';
 
 /** Candidate depths, and what each one actually buys. */
 export const FUNNEL_DEPTHS = [
-  { k: 200, label: '快速', note: '從通用排名前 200 組候選精算' },
-  { k: 1000, label: '完整 Top 10', note: '從通用排名前 1000 組候選精算' },
+  { k: 200, label: '快速', note: '從通用排名前 200 組隊伍計算' },
+  { k: 1000, label: '完整 Top 10', note: '從通用排名前 1000 組隊伍計算' },
 ] as const;
 
 export interface SongCandidate {

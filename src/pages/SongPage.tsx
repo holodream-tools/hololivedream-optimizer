@@ -316,11 +316,11 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                                   onClick={() => { runIdRef.current += 1; setBusy(null); }}>取消</button>
                         </div>
                       )
-                      : <button className="primary" onClick={runSongOptimize}>歌曲精算</button>}
+                      : <button className="primary" onClick={runSongOptimize}>開始計算</button>}
                   </div>
 
                   {run.stamp !== stamp && (
-                    <p className="stale">庫存已變更，請重新跑一次「最佳化」再做歌曲精算。</p>
+                    <p className="stale">庫存已變更，請先重新跑一次「隊伍最佳化」，再回來計算。</p>
                   )}
 
                   {ranked && ranked.length > 0 && (
@@ -415,14 +415,14 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                       )}
 
                       <p className="metric-note">
-                        這是從通用排名前 {pool.toLocaleString()} 組候選中精算出來的最佳解，不是全域最佳。
-                        實測六首歌，冠軍都落在通用前 50；但完整的歌曲前十要到前 1000 組才收齊，所以想看完整排名請切「完整 Top 10」。
+                        這是從通用排名前 {pool.toLocaleString()} 組隊伍裡算出來的最好結果，不保證是所有隊伍裡的第一名。
+                        測過六首歌，每一首最強的隊伍都在通用前 50 名以內；但完整的前十名要看到前 1000 組才收得齊，想看完整排名請切「完整 Top 10」。
                       </p>
                     </>
                   )}
 
                   {!ranked && !busy && (
-                    <p className="empty">按「歌曲精算」開始。</p>
+                    <p className="empty">按上面的「開始計算」。</p>
                   )}
                 </>
               )}
