@@ -705,32 +705,39 @@ button:disabled { opacity: .45; cursor: default; }
 .leader-block { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px;
                 align-items: center;
                 background: var(--surface); border: 1px solid var(--brand-line);
-                /* Extra room on the right so the gap around the artwork reads
-                   even: the left column is taller than the image, so centring
-                   it leaves ~32px above and below, and a 16px right padding
-                   looked pinched against that. */
-                border-radius: 12px; padding: 14px 26px 14px 16px; margin-bottom: 14px; }
+                border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
 .leader-pick { min-width: 0; display: grid; gap: 6px; align-content: start; }
 .leader-chip-label { font-size: 10.5px; font-weight: 700; letter-spacing: .1em;
                      text-transform: uppercase; color: var(--brand); }
 .leader-pick select { width: 100%; max-width: 52ch; }
 .leader-effect { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.6; }
 .leader-note { margin: 0; font-size: 11.5px; color: var(--ink-3); }
-/* Centred in its track, so the space above and below stays equal whatever the
-   left column's text does: the bottom edge cannot end up against the border
-   while the top still has room. */
-.leader-art { position: relative; align-self: center; width: 128px; }
-.leader-art img { width: 100%; height: auto; display: block; aspect-ratio: 16 / 9;
+/* Stretched rather than a fixed height. The image now fills the card top to
+   bottom, so the only gap is the card's own padding -- equal above and below by
+   construction -- and it is bigger without a magic number to keep in step with
+   the text. Width scales with the viewport, capped so it stays visibly smaller
+   than a member tile (which sits at 140-240px) and never reads as a sixth
+   member. object-fit crops rather than distorts when the card is tall. */
+.leader-art { position: relative; align-self: stretch; width: clamp(132px, 14vw, 176px); }
+.leader-art img { width: 100%; height: 100%; display: block;
                   object-fit: cover; border-radius: 8px; border: 1px solid var(--brand-line); }
-.leader-noart { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 8px;
+.leader-noart { display: grid; place-items: center; height: 100%; min-height: 72px;
+                border-radius: 8px;
                 border: 1px dashed var(--line); color: var(--ink-3); font-size: 11px; }
 .leader-chip { position: absolute; top: 5px; left: 5px; z-index: 1; font-size: 9px;
                font-weight: 700; letter-spacing: .12em; line-height: 1; color: #fff;
                background: var(--brand); border-radius: 4px; padding: 3px 6px; }
 .team-split { border: 0; border-top: 1px solid var(--line-soft); margin: 2px 0 14px; }
 @media (max-width: 560px) {
+  /* Stacked: nothing to stretch to, so the artwork goes back to its own
+     aspect ratio rather than filling a row whose height it now defines. */
   .leader-block { grid-template-columns: minmax(0, 1fr); }
-  .leader-art { width: 100%; max-width: 220px; }
+  /* Width keeps the same clamp as the two-column case. Letting it go full
+     width here made the artwork 1.6x a member tile on a phone, which is the
+     opposite of what it is for. */
+  .leader-art { align-self: start; }
+  .leader-art img { height: auto; aspect-ratio: 16 / 9; }
+  .leader-noart { height: auto; aspect-ratio: 16 / 9; }
 }
 
 /* ---- conditional skills ---- */
