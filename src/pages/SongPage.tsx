@@ -111,7 +111,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
         <div>
           <h2>歌曲／順序</h2>
           <p className="page-sub">
-            以公開譜面計算 Perfect-FC 預估分，並找出最佳站位。不含玩家失誤、Board、Connect、Memory 與 Fever。
+            以公開譜面計算<b>指定歌曲理論預估分（Perfect 假設）</b>，並找出最佳站位。不含玩家失誤、Board、Connect、Memory 與 Fever。
           </p>
         </div>
       </div>
@@ -119,15 +119,23 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
       {!run && <p className="hint">先到「最佳化」計算一次，才能在這裡挑隊伍。</p>}
 
       {run && (
-        <div className="filters">
-          <select value={pickedTeam} onChange={(event) => setPickedTeam(Number(event.target.value))}>
-            {run.rows.map((row, index) => (
-              <option key={index} value={index}>
-                #{index + 1} · {Math.round(row.value).toLocaleString()} · {row.members.map((card) => card.name).join('、')}
-              </option>
-            ))}
-          </select>
-        </div>
+        <>
+          <div className="filters">
+            <select value={pickedTeam} onChange={(event) => setPickedTeam(Number(event.target.value))}
+                    title="隊伍依綜合推薦指數排名；選單裡的數字是指數，不是歌曲預估分。">
+              {run.rows.map((row, index) => (
+                <option key={index} value={index}>
+                  #{index + 1} · {Math.round(row.value).toLocaleString()} · {row.members.map((card) => card.name).join('、')}
+                </option>
+              ))}
+            </select>
+          </div>
+          {/* The dropdown carries the optimiser's index, the panel below carries a
+              song score. Same page, two different quantities -- say which is which. */}
+          <p className="metric-note is-filter-note">
+            選單裡的數字是<b>綜合推薦指數</b>（隊伍排名用），不是歌曲預估分。
+          </p>
+        </>
       )}
 
       {chartsLoading && <p className="hint">正在載入譜面資料…</p>}
@@ -196,10 +204,13 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                   </header>
 
                   <div className="song-score">
-                    <p className="breakdown-label">最佳站位預估分</p>
+                    <p className="breakdown-label"
+                       title="依實際歌曲譜面、Combo、Special、Active、SAR 等時間點計算。">
+                      指定歌曲理論預估分（Perfect 假設）
+                    </p>
                     <b>{outcome.best.score.toLocaleString()}</b>
                     <p className="song-delta">
-                      最差站位 {outcome.worst.toLocaleString()}
+                      最佳站位 · 最差站位 {outcome.worst.toLocaleString()}
                       （相差 {(outcome.best.score - outcome.worst).toLocaleString()}）
                     </p>
                   </div>
@@ -228,6 +239,9 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                     <div><dt>Active 實際貢獻</dt><dd>+{outcome.detail.activeBonus.toFixed(1)}%</dd></div>
                   </dl>
                   <p className="song-source">除數來源：{outcome.detail.ratioSource}</p>
+                  <p className="metric-note">
+                    這個數字依實際歌曲譜面、Combo、Special、Active、SAR 等時間點逐音符計算，與「隊伍最佳化」的綜合推薦指數量綱不同，兩者不能互相比較。
+                  </p>
                 </>
               )}
             </div>

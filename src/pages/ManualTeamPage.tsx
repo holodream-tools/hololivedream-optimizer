@@ -55,7 +55,7 @@ export function ManualTeamPage({ state }: { state: AppState }) {
       <div className="page-head">
         <div>
           <h2>自選隊伍</h2>
-          <p className="page-sub">自己挑五張卡與 Leader Outfit，看推薦指數如何組成。</p>
+          <p className="page-sub">自己挑五張卡與 Leader Outfit，看<b>綜合推薦指數</b>如何組成。</p>
         </div>
         <p className="page-count">{picked.length} / 5 已選</p>
       </div>
@@ -95,9 +95,11 @@ export function ManualTeamPage({ state }: { state: AppState }) {
       {evaluation && !evaluation.duplicate && (
         <section className="breakdown">
           <div className="breakdown-index">
-            <p className="breakdown-label">推薦指數</p>
+            <p className="breakdown-label" title="使用 Generic 192 秒模型快速比較大量隊伍。">
+              綜合推薦指數
+            </p>
             <b>{Math.round(evaluation.index).toLocaleString()}</b>
-            <p className="breakdown-note">相對比較值，非遊戲畫面分數</p>
+            <p className="breakdown-note">用於隊伍強弱比較的估算指標，非實際 Live 分數。</p>
           </div>
           <dl className="breakdown-parts">
             <div><dt>基礎總合力</dt><dd>{evaluation.basePower.toLocaleString()}</dd></div>
@@ -108,6 +110,9 @@ export function ManualTeamPage({ state }: { state: AppState }) {
             <div><dt>Outfit Score Support</dt><dd>+{evaluation.leaderSupport.toFixed(0)}</dd></div>
             <div><dt>Special 時間平均</dt><dd>+{evaluation.specialSupport.toFixed(1)}</dd></div>
           </dl>
+          <p className="metric-note">
+            綜合推薦指數以 Generic 192 秒模型計算，不對應任何一首歌；指定歌曲理論預估分（Perfect 假設）請到「歌曲／順序」計算。
+          </p>
         </section>
       )}
 

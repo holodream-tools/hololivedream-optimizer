@@ -102,7 +102,7 @@ export function OptimizerPage({ state, onOpenSong }: { state: AppState; onOpenSo
         <div>
           <h2>最佳化</h2>
           <p className="page-sub">
-            列舉所有五人組合 × 已解鎖 Leader Outfit，依推薦指數排名。這是隊伍之間的<b>相對</b>比較值，不是遊戲畫面分數。
+            列舉所有五人組合 × 已解鎖 Leader Outfit，依<b>綜合推薦指數</b>排名。用於隊伍強弱比較的估算指標，非實際 Live 分數。
           </p>
         </div>
       </div>
@@ -175,6 +175,11 @@ export function OptimizerPage({ state, onOpenSong }: { state: AppState; onOpenSo
               {filtered.length < run.rows.length && ` · 已略過 ${run.rows.length - filtered.length} 組相似隊伍`}
             </p>
           </div>
+          {/* The ranked list shows a bare number, so what that number is has to be
+              said once, right above it -- not left to a tooltip nobody hovers. */}
+          <p className="metric-note">
+            下方數字是<b>綜合推薦指數</b>：用於隊伍強弱比較的估算指標，非實際 Live 分數。它以 Generic 192 秒模型計算，方便一次比較大量隊伍；要看實際歌曲分數請按「指定歌曲 →」。
+          </p>
           {run.pinned.length > 0 && (
             <p className="pinned-note">
               這份結果限定包含：{run.pinned.map((id) => owned.find((card) => card.id === id)?.name ?? id).join('、')}
@@ -188,7 +193,7 @@ export function OptimizerPage({ state, onOpenSong }: { state: AppState; onOpenSo
               <TeamRow key={row.rank} rank={row.rank} value={row.value} members={row.members}
                        leader={row.leader} imageUrl={imageUrl} best={run.rows[0]?.value ?? 0}
                        breakdown={row.breakdown}
-                       onOpenSong={() => onOpenSong(run.rows.indexOf(row))} />
+                       onOpenSong={() => onOpenSong(row.rank - 1)} />
             ))}
           </div>
         </section>

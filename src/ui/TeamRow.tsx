@@ -50,7 +50,9 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
       <div className="team-head">
         <span className="team-rank">{rank}</span>
         <div className="team-score">
-          <b>{Math.round(value).toLocaleString()}</b>
+          <b title="綜合推薦指數：用於隊伍強弱比較的估算指標，非實際 Live 分數">
+            {Math.round(value).toLocaleString()}
+          </b>
           <span className="team-share">{(share * 100).toFixed(1)}%</span>
         </div>
         <div className="team-bar" aria-hidden="true"><i style={{ width: `${share * 100}%` }} /></div>
@@ -100,7 +102,7 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
             <li><span>五張卡基礎三圍</span><b>{breakdown.basePower.toLocaleString()}</b></li>
             <li><span>Passive／Outfit 加成後</span><b>{breakdown.totalPower.toLocaleString()}</b></li>
             <li><span>× Active 期望倍率</span><b>{(value / (breakdown.totalPower || 1)).toFixed(3)}</b></li>
-            <li className="is-result"><span>推薦指數</span><b>{Math.round(value).toLocaleString()}</b></li>
+            <li className="is-result"><span>綜合推薦指數</span><b>{Math.round(value).toLocaleString()}</b></li>
           </ol>
           <dl className="chain-parts">
             <div><dt>Active 期望</dt><dd>+{breakdown.activeScoreUp.toFixed(1)}%</dd></div>
@@ -109,8 +111,7 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
             <div><dt>Special 時間平均</dt><dd>+{breakdown.specialSupport.toFixed(1)}</dd></div>
           </dl>
           <p className="chain-note">
-            Score Support 沒有獨立分數，只在 Active 生效時放大它；Special 以 192 秒參考長度做時間平均。
-            這是隊伍之間的相對比較值，實際分數請用「歌曲／順序」。
+            Score Support 沒有獨立分數，只在 Active 生效時放大它；Special 以 192 秒參考長度做時間平均。綜合推薦指數用 Generic 192 秒模型快速比較大量隊伍，是隊伍之間的相對比較值，非實際 Live 分數；實際分數請看「歌曲／順序」的指定歌曲理論預估分（Perfect 假設）。
           </p>
         </div>
       )}

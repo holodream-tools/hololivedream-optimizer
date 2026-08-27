@@ -89,6 +89,19 @@ button:disabled { opacity: .45; cursor: default; }
 .pct { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink-2); min-width: 40px; }
 .hint { margin: 0; font-size: 13.5px; color: var(--ink-3); }
 
+/* ---- what a number means ----
+   Both headline numbers are bare digits in a big font, and they are not the
+   same kind of quantity. Each one carries a caption in the same voice, so the
+   distinction is read rather than inferred. */
+.metric-note { margin: 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.55;
+               max-width: 76ch; }
+.metric-note b { color: var(--ink-2); font-weight: 650; }
+.results .metric-note { margin-bottom: 12px; }
+.breakdown .metric-note { grid-column: 1 / -1; border-top: 1px solid var(--line-soft);
+                          padding-top: 10px; }
+.song-detail .metric-note { margin-top: 8px; }
+.metric-note.is-filter-note { margin: -4px 0 12px; }
+
 /* ---- results ---- */
 .results { margin-top: 32px; }
 .results-head { display: flex; gap: 14px; align-items: baseline; justify-content: space-between;
@@ -345,6 +358,8 @@ button:disabled { opacity: .45; cursor: default; }
 .song-head h3 { margin: 0; font-size: 18px; font-weight: 700; }
 .song-sub { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .song-score { margin: 16px 0; }
+/* The label names Perfect, and uppercasing it would rewrite the term. */
+.song-score .breakdown-label { text-transform: none; letter-spacing: .04em; font-size: 11px; }
 .song-score b { display: block; font-size: 34px; font-weight: 750; color: var(--brand);
                 font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 3px; }
 .song-delta { margin: 4px 0 0; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
