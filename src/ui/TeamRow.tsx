@@ -1,6 +1,7 @@
 /** One ranked team: its score, its Leader Outfit, and the five members. */
 import { useState } from 'react';
 import { attributeStyle } from './theme';
+import { PassiveConditions } from './PassiveConditions';
 import type { CardJson, LeaderJson } from '../engine/types';
 
 /** How the index was assembled, so the number is not just asserted. */
@@ -27,6 +28,8 @@ export interface TeamRowProps {
   /** Sends this team to the compare page; the label names the slot it lands in. */
   onCompare?: () => void;
   compareLabel?: string;
+  /** Bloom lookup, so the expanded panel can resolve each card's own skill. */
+  bloomOf?: (cardId: string) => number;
   breakdown?: TeamBreakdown;
 }
 
@@ -38,7 +41,7 @@ function splitLeaderName(value: string): [string, string] {
 }
 
 export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSong,
-                         onCompare, compareLabel, breakdown }: TeamRowProps) {
+                         onCompare, compareLabel, bloomOf, breakdown }: TeamRowProps) {
   const [open, setOpen] = useState(false);
   const share = best > 0 ? value / best : 0;
 
@@ -119,6 +122,7 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
             <div><dt>Outfit Score Support</dt><dd>+{breakdown.leaderSupport.toFixed(0)}</dd></div>
             <div><dt>Special 時間平均</dt><dd>+{breakdown.specialSupport.toFixed(1)}</dd></div>
           </dl>
+          {bloomOf && <PassiveConditions members={members} leader={leader} bloomOf={bloomOf} />}
           <p className="chain-note">
             Score Support 沒有獨立分數，只在 Active 生效時放大它；Special 以 192 秒參考長度做時間平均。綜合推薦指數用 Generic 192 秒模型快速比較大量隊伍，是隊伍之間的相對比較值，非實際 Live 分數；實際分數請看「歌曲／順序」的指定歌曲理論預估分（Perfect 假設）。
           </p>

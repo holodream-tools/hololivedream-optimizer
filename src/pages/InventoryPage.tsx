@@ -116,6 +116,12 @@ export function InventoryPage({ state }: { state: AppState }) {
             event.target.value = '';
           }} />
         </label>
+        {/* Destructive and unrecoverable without an export, so it asks first. */}
+        <button className="danger" onClick={() => {
+          if (window.confirm('清除這台裝置上儲存的持有卡、命座、自選隊伍與偏好設定？\n這無法復原，除非你先匯出過備份。')) {
+            state.clearSaved();
+          }
+        }}>清除已儲存設定</button>
       </div>
 
       <div className={density === 'compact' ? 'rows' : 'grid'}>

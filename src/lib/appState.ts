@@ -4,10 +4,14 @@
  * Kept in one hook so every page reads the same inventory and the optimizer's
  * result survives navigating away and back.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ImageSource } from './images';
 import { fetchUpstream } from './upstream';
-import { fromJson, load, save, type Inventory, type InventoryRow } from './inventory';
+import {
+  clearStored, emptyRow, fromJson, load, save, type Inventory, type InventoryRow,
+} from './inventory';
+import { DEFAULT_PREFS, clearPrefs, loadPrefs, savePrefs, type Prefs } from './prefs';
+import { decodeTeam, stripHash, type SharedTeam } from './share';
 import type { CardBundle, CardJson, LeaderJson } from '../engine/types';
 import type { ChartMeta } from '../engine/chartScore';
 import type { TeamBreakdown } from '../ui/TeamRow';
@@ -89,6 +93,19 @@ export interface AppState {
   /** Fill A, then B, then start over at A. */
   pushCompare: (pick: ComparePick) => number;
   setCompareSlot: (slot: number, pick: ComparePick | null) => void;
+  /** Remembered settings; setPrefs writes through to localStorage. */
+  prefs: Prefs;
+  /**
+   * Accepts a function so several changes in one tick compose. A plain object
+   * closes over the render's `prefs`, and five picks in a row would keep only
+   * the last -- which is exactly what happened before this took a function.
+   */
+  setPrefs: (patch: Partial<Prefs> | ((previous: Prefs) => Partial<Prefs>)) => void;
+  /** Forget everything this site stored on this device. */
+  clearSaved: () => void;
+  /** What a shared link brought in, for the notice the page shows. */
+  shared: { team: SharedTeam; added: string[] } | null;
+  dismissShared: () => void;
 }
 
 export function useAppState(): AppState {
@@ -103,7 +120,9 @@ export function useAppState(): AppState {
   const [stamp, setStamp] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [run, setRun] = useState<ResolvedRun | null>(null);
-  const [songKey, setSongKey] = useState('');
+  const [prefs, setPrefsState] = useState<Prefs>(DEFAULT_PREFS);
+  const [shared, setShared] = useState<{ team: SharedTeam; added: string[] } | null>(null);
+  const [songKey, setSongKeyState] = useState('');
   const [compare, setCompare] = useState<[ComparePick | null, ComparePick | null]>([null, null]);
 
   useEffect(() => {
@@ -137,6 +156,95 @@ export function useAppState(): AppState {
 
     return () => { cancelled = true; controller.abort(); };
   }, []);
+
+  // Restore what was saved, then let a shared link override it. The link wins
+  // because the player followed it on purpose; the saved settings are only what
+  // they happened to be doing last time.
+  // Runs once. StrictMode invokes effects twice in development, and this one
+  // consumes the URL and writes storage: doing that twice miscounted what a
+  // link had added and, once the hash was gone, would restore the saved picks
+  // over the shared ones.
+  const bootstrapped = useRef(false);
+  useEffect(() => {
+    if (!bundle || bootstrapped.current) return;
+    bootstrapped.current = true;
+
+    const stored = loadPrefs();
+    const team = decodeTeam(window.location.hash);
+    if (!team) { setPrefsState(stored); setSongKeyState(stored.songKey); return; }
+
+    const known = new Set(bundle.cards.map((card) => card.id));
+    const leaderCard = team.leaderId.replace(/^outfit:/, '');
+    // The Outfit's card is often one of the five as well, and counting it twice
+    // would overstate what the link added.
+    const wanted = [...new Set([...team.members, leaderCard])].filter((id) => known.has(id));
+
+    // A link is additive: cards it needs are switched on with the Bloom it
+    // carried, so the team scores the same here as it did there. Nothing the
+    // recipient already owns is turned off, and nothing is removed.
+    const next = load(bundle);
+    const added = wanted.filter((id) => !next.get(id)?.owned);
+    for (const id of wanted) {
+      const row = next.get(id) ?? emptyRow(id);
+      const bloom = team.blooms[id];
+      next.set(id, {
+        ...row,
+        owned: 1,
+        bloom: bloom === undefined ? row.bloom : bloom,
+        leader_unlocked: id === leaderCard ? 1 : row.leader_unlocked,
+      });
+    }
+    save(next);
+    setInventory(next);
+    setStamp((value) => value + 1);
+
+    const restored: Prefs = {
+      ...stored,
+      manualPicks: team.members.filter((id) => known.has(id)),
+      manualLeaderId: team.leaderId,
+      songKey: team.songKey ?? stored.songKey,
+      difficulty: team.difficulty ?? stored.difficulty,
+    };
+    setPrefsState(restored);
+    setSongKeyState(restored.songKey);
+    savePrefs(restored);
+    setShared({ team, added });
+    // The payload has been consumed; leave a clean address bar behind.
+    stripHash();
+  }, [bundle]);
+
+  const setPrefs = useCallback(
+    (patch: Partial<Prefs> | ((previous: Prefs) => Partial<Prefs>)) => {
+      setPrefsState((previous) => {
+        const next = { ...previous, ...(typeof patch === 'function' ? patch(previous) : patch) };
+        savePrefs(next);
+        return next;
+      });
+    }, []);
+
+  const setSongKey = useCallback((key: string) => {
+    setSongKeyState(key);
+    setPrefs({ songKey: key });
+  }, [setPrefs]);
+
+  const dismissShared = useCallback(() => setShared(null), []);
+
+  /**
+   * Everything this site put on this device, gone: the inventory and the
+   * settings both. Results are not cleared because they are not stored.
+   */
+  const clearSaved = useCallback(() => {
+    clearPrefs();
+    clearStored();
+    setPrefsState(DEFAULT_PREFS);
+    setSongKeyState('');
+    setShared(null);
+    setRun(null);
+    setCompare([null, null]);
+    // Storage is empty now, so this reloads blank rows for every card.
+    if (bundle) setInventory(load(bundle));
+    setStamp((value) => value + 1);
+  }, [bundle]);
 
   // Charts are 1.9 MB, so they load on demand rather than on first paint.
   const loadCharts = useCallback(() => {
@@ -248,6 +356,7 @@ export function useAppState(): AppState {
     patch, bulk, replaceInventory, exportInventory, importInventory,
     run, setRun,
     songKey, setSongKey,
+    prefs, setPrefs, clearSaved, shared, dismissShared,
     compare, pushCompare, setCompareSlot,
   };
 }

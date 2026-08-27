@@ -3,13 +3,27 @@ import { useMemo, useState } from 'react';
 import { cardFacts, outfitTable } from '../engine/precompute';
 import { expectedIndexOf, leaderPowerAndSupport, makeMemberState, memberPart } from '../engine/overallScore';
 import { attributeStyle } from '../ui/theme';
+import { outfitText } from '../ui/skillText';
+import { PassiveConditions } from '../ui/PassiveConditions';
+import { shareUrl } from '../lib/share';
 import type { AppState } from '../lib/appState';
 
 export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompare: () => void }) {
-  const { bundle, images, owned, unlockedLeaders, inventory, compare, pushCompare } = state;
-  const [picked, setPicked] = useState<string[]>([]);
-  const [leaderId, setLeaderId] = useState('');
+  const {
+    bundle, images, owned, unlockedLeaders, inventory, compare, pushCompare,
+    prefs, setPrefs, bloomOf, songKey, shared, dismissShared,
+  } = state;
+  // The picks live in the remembered settings, so they survive a reload and a
+  // shared link can seed them.
+  const picked = prefs.manualPicks;
+  const leaderId = prefs.manualLeaderId;
+  const setPicked = (next: string[] | ((previous: string[]) => string[])) =>
+    setPrefs((previous) => ({
+      manualPicks: typeof next === 'function' ? next(previous.manualPicks) : next,
+    }));
+  const setLeaderId = (id: string) => setPrefs({ manualLeaderId: id });
   const [query, setQuery] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const evaluation = useMemo(() => {
     if (picked.length !== 5 || !leaderId) return null;
@@ -39,6 +53,14 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
     };
   }, [picked, leaderId, owned, unlockedLeaders, inventory]);
 
+  const pickedLeader = unlockedLeaders.find((row) => row.id === leaderId) ?? null;
+  const pickedLeaderCard = pickedLeader?.id.replace(/^outfit:/, '') ?? '';
+  const pickedLeaderPayload = pickedLeader
+    ? pickedLeader.outfits[String(bloomOf(pickedLeaderCard))]
+      ?? pickedLeader.outfits[String(pickedLeader.maxBloom)] ?? null
+    : null;
+  const pickedLeaderArt = pickedLeaderCard ? images?.url(pickedLeaderCard) : undefined;
+
   const candidates = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return owned.filter((card) => !needle || `${card.name}${card.title}`.toLowerCase().includes(needle));
@@ -60,7 +82,46 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
         <p className="page-count">{picked.length} / 5 已選</p>
       </div>
 
+      {shared && (
+        <p className="fresh">
+          已從分享連結載入這支隊伍。
+          {shared.added.length > 0 && (
+            <>其中 {shared.added.length} 張卡不在你的持有清單裡，已為你加入（含連結帶來的命座），你原本的設定沒有被移除。</>
+          )}
+          <button className="ghost" onClick={dismissShared}>知道了</button>
+        </p>
+      )}
+
       {owned.length < 5 && <p className="hint">先到「我的卡片」勾選至少 5 張。</p>}
+
+      {/* The Outfit is a separate slot, not a sixth member. It sits above the
+          five, reads left to right, and its artwork is deliberately small: it is
+          where an effect comes from, not someone who takes the stage. */}
+      <section className="leader-block">
+        <div className="leader-pick">
+          <span className="leader-chip-label">隊長服裝</span>
+          <select value={leaderId} onChange={(event) => setLeaderId(event.target.value)}>
+            <option value="">選擇 Leader Outfit…</option>
+            {unlockedLeaders.map((leader) => (
+              <option key={leader.id} value={leader.id}>{leader.name}</option>
+            ))}
+          </select>
+          <p className="leader-effect">
+            {leaderId
+              ? (outfitText(pickedLeaderPayload) ?? '這件服裝沒有可辨識的效果。')
+              : '選一件服裝，這裡會顯示它的效果。'}
+          </p>
+          <p className="leader-note">Leader 不佔 5 名 Member 名額。</p>
+        </div>
+        <div className="leader-art">
+          <span className="leader-chip">LEADER</span>
+          {pickedLeaderArt
+            ? <img src={pickedLeaderArt} alt="" width={192} height={108} />
+            : <span className="leader-noart">未選擇</span>}
+        </div>
+      </section>
+
+      <hr className="team-split" />
 
       <div className="manual-slots">
         {Array.from({ length: 5 }, (_, slot) => {
@@ -81,13 +142,30 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
       </div>
 
       <div className="filters">
-        <select value={leaderId} onChange={(event) => setLeaderId(event.target.value)}>
-          <option value="">選擇 Leader Outfit…</option>
-          {unlockedLeaders.map((leader) => <option key={leader.id} value={leader.id}>{leader.name}</option>)}
-        </select>
         <input type="search" value={query} placeholder="搜尋持有卡"
                onChange={(event) => setQuery(event.target.value)} />
         <button onClick={() => setPicked([])} disabled={!picked.length}>清空</button>
+        <button
+          disabled={picked.length !== 5 || !leaderId}
+          onClick={async () => {
+            const blooms: Record<string, number> = {};
+            for (const id of [...picked, pickedLeaderCard]) if (id) blooms[id] = bloomOf(id);
+            const url = shareUrl({
+              members: picked, leaderId, blooms,
+              songKey: songKey || undefined, difficulty: prefs.difficulty,
+            });
+            try {
+              await navigator.clipboard.writeText(url);
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 2000);
+            } catch {
+              // Clipboard refused (no permission, or an insecure origin):
+              // put the link where it can still be copied by hand.
+              window.prompt('複製這個連結：', url);
+            }
+          }}>
+          {copied ? '已複製 ✓' : '複製分享連結'}
+        </button>
         <button
           disabled={!evaluation || evaluation.duplicate}
           onClick={() => {
@@ -125,6 +203,10 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
             綜合推薦指數以 Generic 192 秒模型計算，不對應任何一首歌；指定歌曲理論預估分（Perfect 假設）請到「歌曲／順序」計算。
           </p>
         </section>
+      )}
+
+      {evaluation && !evaluation.duplicate && (
+        <PassiveConditions members={evaluation.members} leader={evaluation.leader} bloomOf={bloomOf} />
       )}
 
       <div className="grid is-compact">

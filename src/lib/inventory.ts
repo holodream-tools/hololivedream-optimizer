@@ -45,6 +45,15 @@ export function save(inventory: Inventory): void {
   }
 }
 
+/** Forget the stored inventory. `load` then returns blank rows for every card. */
+export function clearStored(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Nothing useful to do about a storage that refuses to co-operate.
+  }
+}
+
 export function toJson(inventory: Inventory): string {
   return JSON.stringify([...inventory.values()], null, 2);
 }

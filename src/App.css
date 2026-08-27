@@ -694,3 +694,45 @@ button:disabled { opacity: .45; cursor: default; }
   .attrib-rows li { grid-template-columns: 1fr 64px; }
   .attrib-bar, .attrib-values { display: none; }
 }
+
+/* ---- leader block (自選隊伍) ----
+   The Outfit is a separate slot, not a sixth member: it reads left to right,
+   and its artwork is deliberately smaller than a member card so it looks like
+   where an effect comes from rather than someone taking the stage. */
+.leader-block { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;
+                background: var(--surface); border: 1px solid var(--brand-line);
+                border-radius: 12px; padding: 13px 15px; margin-bottom: 14px; }
+.leader-pick { flex: 1 1 260px; min-width: 0; display: grid; gap: 6px; align-content: start; }
+.leader-chip-label { font-size: 10.5px; font-weight: 700; letter-spacing: .1em;
+                     text-transform: uppercase; color: var(--brand); }
+.leader-pick select { max-width: 100%; }
+.leader-effect { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.6; }
+.leader-note { margin: 0; font-size: 11.5px; color: var(--ink-3); }
+.leader-art { position: relative; flex: 0 0 auto; width: 132px; }
+.leader-art img { width: 100%; height: auto; display: block; aspect-ratio: 16 / 9;
+                  object-fit: cover; border-radius: 8px; border: 1px solid var(--brand-line); }
+.leader-noart { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 8px;
+                border: 1px dashed var(--line); color: var(--ink-3); font-size: 11px; }
+.leader-chip { position: absolute; top: 5px; left: 5px; z-index: 1; font-size: 9px;
+               font-weight: 700; letter-spacing: .12em; line-height: 1; color: #fff;
+               background: var(--brand); border-radius: 4px; padding: 3px 6px; }
+.team-split { border: 0; border-top: 1px solid var(--line); margin: 0 0 14px; }
+@media (max-width: 560px) { .leader-art { width: 100%; max-width: 220px; } }
+
+/* ---- conditional skills ---- */
+.conds { margin: 0 0 18px; }
+.conds h4 { display: flex; gap: 9px; align-items: baseline; flex-wrap: wrap;
+            margin: 0 0 6px; font-size: 13px; font-weight: 700; }
+.conds h4 span { font-size: 11.5px; font-weight: 400; color: var(--ink-3); }
+.conds ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.conds li { display: flex; gap: 9px; align-items: baseline; flex-wrap: wrap;
+            font-size: 12px; padding: 4px 9px; border-radius: 7px; background: var(--surface-2); }
+.conds li.is-unmet { background: var(--happy-soft); border: 1px solid var(--happy-line); opacity: .82; }
+.conds-flag { font-size: 11px; font-weight: 700; white-space: nowrap; }
+.conds li.is-met .conds-flag { color: var(--brand); }
+.conds li.is-unmet .conds-flag { color: var(--happy); }
+.conds-who { font-weight: 650; white-space: nowrap; }
+.conds-text { color: var(--ink-3); min-width: 0; }
+.conds-reason { color: var(--happy); font-weight: 650; white-space: nowrap; }
+button.danger { color: var(--happy); border-color: var(--happy-line); }
+button.danger:hover { background: var(--happy-soft); }

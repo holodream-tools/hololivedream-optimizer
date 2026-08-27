@@ -12,14 +12,20 @@ import type { AppState } from '../lib/appState';
 export function OptimizerPage({ state, onOpenSong, onCompare }: {
   state: AppState; onOpenSong: (index: number) => void; onCompare: () => void;
 }) {
-  const { bundle, images, owned, unlockedLeaders, inventory, stamp, run, compare, pushCompare } = state;
+  const {
+    bundle, images, owned, unlockedLeaders, inventory, stamp, run, compare, pushCompare,
+    prefs, setPrefs, bloomOf,
+  } = state;
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string[]>([]);
-  const [diversity, setDiversity] = useState<DiversityOptions>({
-    oneLeaderPerTeam: true, minDistinctMembers: 0,
-  });
-  const [shownCount, setShownCount] = useState(20);
+  // Both are remembered settings: they say how the player likes the list read,
+  // not anything about a particular result.
+  const diversity: DiversityOptions = {
+    oneLeaderPerTeam: prefs.oneLeaderPerTeam,
+    minDistinctMembers: prefs.minDistinctMembers,
+  };
+  const shownCount = prefs.shownCount;
 
   // The sweep always keeps this many internally. Measured across 50/100/200/400
   // the cost is indistinguishable, so the headroom is free -- and it means the
@@ -120,18 +126,18 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
       <section className="tuning">
         <label className="toggle">
           <input type="checkbox" checked={diversity.oneLeaderPerTeam}
-                 onChange={(event) => setDiversity((previous) => ({ ...previous, oneLeaderPerTeam: event.target.checked }))} />
+                 onChange={(event) => setPrefs({ oneLeaderPerTeam: event.target.checked })} />
           <span>同一組隊伍只顯示最佳 Leader</span>
         </label>
         <label className="toggle">
           <input type="checkbox" checked={diversity.minDistinctMembers > 0}
-                 onChange={(event) => setDiversity((previous) => ({ ...previous, minDistinctMembers: event.target.checked ? 2 : 0 }))} />
+                 onChange={(event) => setPrefs({ minDistinctMembers: event.target.checked ? 2 : 0 })} />
           <span>略過只差一張卡的相似隊伍</span>
         </label>
         <label className="count">
           <span className="count-label">顯示筆數</span>
           <input type="range" min={5} max={30} step={1} value={shownCount}
-                 onChange={(event) => setShownCount(Number(event.target.value))} />
+                 onChange={(event) => setPrefs({ shownCount: Number(event.target.value) })} />
           <output>{shownCount}</output>
         </label>
       </section>
@@ -202,7 +208,7 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
             {shown.map((row) => (
               <TeamRow key={row.rank} rank={row.rank} value={row.value} members={row.members}
                        leader={row.leader} imageUrl={imageUrl} best={run.rows[0]?.value ?? 0}
-                       breakdown={row.breakdown}
+                       breakdown={row.breakdown} bloomOf={bloomOf}
                        onOpenSong={() => onOpenSong(row.rank - 1)}
                        compareLabel={compare[0] === null ? '→ A' : compare[1] === null ? '→ B' : '→ A'}
                        onCompare={() => {

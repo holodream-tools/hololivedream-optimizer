@@ -58,9 +58,11 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
   const {
     bundle, images, charts, chartBlob, chartsLoading, loadCharts, run, inventory,
     owned, unlockedLeaders, stamp, songKey: chartKey, setSongKey: setChartKey,
+    prefs, setPrefs,
   } = state;
   const [query, setQuery] = useState('');
-  const [difficulty, setDifficulty] = useState('Expert');
+  const difficulty = prefs.difficulty;
+  const setDifficulty = (value: string) => setPrefs({ difficulty: value });
   const [sort, setSort] = useState<SongSort>('level');
   const [pickedTeam, setPickedTeam] = useState<number>(teamIndex ?? 0);
   const [mode, setMode] = useState<SongMode>('team');
