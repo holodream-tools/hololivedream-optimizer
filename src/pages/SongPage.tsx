@@ -12,6 +12,7 @@ import { bestOrder } from '../engine/compare';
 import {
   FUNNEL_DEPTHS, distinctFormations, rankSongResults, scoreCandidates, upliftOverGenericBest,
 } from '../engine/songOptimize';
+import { SongTimeline } from '../ui/SongTimeline';
 import { DIFFICULTIES, attributeStyle, difficultyStyle, duration } from '../ui/theme';
 import type { AppState } from '../lib/appState';
 import type { CardJson } from '../engine/types';
@@ -67,6 +68,8 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
   const [ranked, setRanked] = useState<SongRanked[] | null>(null);
   const [uplift, setUplift] = useState<ReturnType<typeof upliftOverGenericBest>>(null);
   const [pool, setPool] = useState(0);
+  /** Which of the ranked teams the timeline is drawing; the winner by default. */
+  const [timelineTeam, setTimelineTeam] = useState(0);
   const [busy, setBusy] = useState<{ done: number; total: number } | null>(null);
   // A run token, not a cancel flag: a shared boolean lets a new run clear the
   // old one's cancellation, and both then keep going and fight over progress.
@@ -95,16 +98,30 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
     return [...rows].sort(compare[sort]);
   }, [charts, query, difficulty, sort]);
 
+  const chartMeta = useMemo(
+    () => charts?.charts.find((row) => row.key === chartKey) ?? null,
+    [charts, chartKey],
+  );
+
+  // One prepared chart for the page: scoring, ranking and the timeline all read
+  // the same prefix sums, so a picture cannot drift from the score beside it.
+  const chartPrepared = useMemo<PreparedChart | null>(() => {
+    const located = chartKey ? charts?.index[chartKey] : undefined;
+    if (!chartMeta || !located || !chartBlob) return null;
+    const [offset, count] = located;
+    return prepare(chartMeta, materialize(chartBlob, offset, count));
+  }, [chartMeta, charts, chartBlob, chartKey]);
+
   const team = run?.rows[pickedTeam];
 
   const outcome = useMemo(() => {
-    if (!team || !charts || !chartBlob || !chartKey) return null;
-    const meta = charts.charts.find((chart) => chart.key === chartKey);
-    const located = charts.index[chartKey];
-    if (!meta || !located) return null;
+    if (!team || !chartMeta || !chartPrepared) return null;
+    const located = charts?.index[chartKey];
+    if (!located) return null;
 
-    const [offset, count] = located;
-    const prepared = prepare(meta, materialize(chartBlob, offset, count));
+    const meta = chartMeta;
+    const prepared = chartPrepared;
+    const count = located[1];
     const facts = cardFacts(team.members, team.members.map((card) => inventory.get(card.id)?.bloom ?? card.maxBloom));
     const leaderBloom = Math.min(
       inventory.get(team.leader.id.replace(/^outfit:/, ''))?.bloom ?? team.leader.maxBloom,
@@ -117,30 +134,22 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
     // search lives in the engine so both modes rank orders the same way.
     const best = bestOrder(facts, [0, 1, 2, 3, 4], payload, prepared);
     return { meta, prepared, best, worst: best.worst, detail: best.detail, noteCount: count };
-  }, [team, charts, chartBlob, chartKey, inventory]);
-
-  const chartMeta = useMemo(
-    () => charts?.charts.find((row) => row.key === chartKey) ?? null,
-    [charts, chartKey],
-  );
+  }, [team, chartMeta, chartPrepared, charts, chartKey, inventory]);
 
   // A result belongs to one song at one depth; changing either invalidates it.
-  useEffect(() => { runIdRef.current += 1; setBusy(null); setRanked(null); setUplift(null); },
-    [chartKey, depth, stamp]);
+  useEffect(() => {
+    runIdRef.current += 1;
+    setBusy(null); setRanked(null); setUplift(null); setTimelineTeam(0);
+  }, [chartKey, depth, stamp]);
 
   const runSongOptimize = useCallback(async () => {
-    if (!run || !charts || !chartBlob || !chartKey) return;
-    const meta = charts.charts.find((row) => row.key === chartKey);
-    const located = charts.index[chartKey];
-    if (!meta || !located) return;
+    if (!run || !chartPrepared) return;
+    const prepared = chartPrepared;
 
     const runId = runIdRef.current + 1;
     runIdRef.current = runId;
     setRanked(null);
     setUplift(null);
-
-    const [offset, count] = located;
-    const prepared: PreparedChart = prepare(meta, materialize(chartBlob, offset, count));
     // Rebuilt exactly as the sweep built them, so the candidate indices mean the
     // same cards they meant when the ranking was produced.
     const facts = cardFacts(owned, owned.map((card) => inventory.get(card.id)?.bloom ?? card.maxBloom));
@@ -167,8 +176,9 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
     const top = rankSongResults(facts, scored, payloadOf, prepared, 10);
     setRanked(top);
     setUplift(upliftOverGenericBest(top, scored));
+    setTimelineTeam(0);
     setBusy(null);
-  }, [run, charts, chartBlob, chartKey, owned, unlockedLeaders, inventory, depth]);
+  }, [run, chartPrepared, owned, unlockedLeaders, inventory, depth]);
 
   if (!bundle) return null;
 
@@ -363,7 +373,10 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                         </thead>
                         <tbody>
                           {ranked.map((row) => (
-                            <tr key={row.songRank}>
+                            <tr key={row.songRank}
+                                className={row.songRank - 1 === timelineTeam ? 'is-picked' : ''}
+                                onClick={() => setTimelineTeam(row.songRank - 1)}
+                                title="看這一隊的時間軸">
                               <th scope="row">#{row.songRank}</th>
                               <td>{row.songScore.toLocaleString()}</td>
                               <td>#{row.genericRank}</td>
@@ -374,6 +387,30 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                           ))}
                         </tbody>
                       </table>
+
+                      {ranked[timelineTeam] && chartPrepared && (
+                        <section className="timeline-block">
+                          <h4>
+                            Timeline 分析
+                            <span>
+                              第 {ranked[timelineTeam].songRank} 名 ·
+                              {' '}{ranked[timelineTeam].songScore.toLocaleString()} 分 ·
+                              {' '}通用 #{ranked[timelineTeam].genericRank}
+                            </span>
+                          </h4>
+                          <p className="timeline-order">
+                            最佳 Skill Order：
+                            {ranked[timelineTeam].order
+                              .map((cardIndex, slot) => `${slot + 1}. ${owned[cardIndex]?.name ?? '?'}`)
+                              .join('　')}
+                          </p>
+                          <SongTimeline
+                            prepared={chartPrepared}
+                            detail={ranked[timelineTeam].detail}
+                            members={ranked[timelineTeam].order.map((cardIndex) => owned[cardIndex])}
+                          />
+                        </section>
+                      )}
 
                       <p className="metric-note">
                         這是從通用排名前 {pool.toLocaleString()} 組候選中精算出來的最佳解，不是全域最佳。

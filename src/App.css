@@ -632,3 +632,35 @@ button:disabled { opacity: .45; cursor: default; }
 .song-rank-table th[scope="row"] { color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .order-cell { text-align: left !important; font-size: 11.5px; color: var(--ink-3);
               font-variant-numeric: normal; }
+
+/* ---- timeline ----
+   The averages say how strong a skill is; this says where that strength lands. */
+.timeline-block { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 16px; }
+.timeline-block h4 { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap;
+                     margin: 0 0 4px; font-size: 14px; font-weight: 700; }
+.timeline-block h4 span { font-size: 11.5px; font-weight: 400; color: var(--ink-3);
+                          font-variant-numeric: tabular-nums; }
+.timeline-order { margin: 0 0 10px; font-size: 12px; color: var(--ink-3); line-height: 1.6; }
+.timeline-scroll { overflow-x: auto; }
+.timeline-svg { display: block; width: 100%; min-width: 640px; height: auto;
+                background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
+.tl-grid { stroke: var(--line); stroke-width: 1; }
+.tl-base, .tl-rowline { stroke: var(--line); stroke-width: 1; }
+.tl-tick { font-size: 9px; fill: var(--ink-3); }
+.tl-label { font-size: 10.5px; font-weight: 700; fill: var(--ink-2); }
+.tl-sublabel { font-size: 8.5px; fill: var(--ink-3); }
+.tl-slot { font-size: 9px; font-weight: 700; letter-spacing: .06em; }
+.tl-name { font-size: 10.5px; fill: var(--ink-2); }
+.tl-density { fill: var(--ink-3); opacity: .42; }
+.tl-weight { fill: none; stroke: var(--brand); stroke-width: 1.4; opacity: .95; }
+.tl-special { stroke: var(--surface); stroke-width: .6; }
+.timeline-legend { margin: 8px 0 12px; font-size: 11.5px; color: var(--ink-3); line-height: 1.6;
+                   max-width: 76ch; }
+.timeline-table { font-size: 12px; }
+.timeline-table .tl-cell-name { text-align: left; }
+.tl-lift { margin-left: 5px; font-size: 10.5px; opacity: .85; }
+/* The rank table doubles as the timeline's picker. */
+.song-rank-table tbody tr { cursor: pointer; }
+.song-rank-table tbody tr:hover { background: var(--surface-2); }
+.song-rank-table tbody tr.is-picked { background: var(--brand-soft); }
+.song-rank-table tbody tr.is-picked th { color: var(--brand); font-weight: 750; }

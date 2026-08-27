@@ -115,6 +115,50 @@ export function prepare(chart: ChartMeta, timeline: ChartTimeline): PreparedChar
   };
 }
 
+/** One slice of the chart, for the timeline's density strip. */
+export interface DensityBucket {
+  start: number;
+  end: number;
+  notes: number;
+  /** Score weight of those notes: mid/normal split and Combo Bonus included. */
+  weight: number;
+}
+
+/**
+ * Slice the chart into equal time buckets.
+ *
+ * Both series come from the prefix sums `prepare` already built, so this reads
+ * the chart rather than rescanning it, and the weight series is the same score
+ * the note-by-note pass would have assigned. `perfectNoteScore` comes from the
+ * team being drawn, which is what makes the two series diverge: a burst of mid
+ * notes is tall in count and short in score.
+ */
+export function chartDensity(prepared: PreparedChart, perfectNoteScore: number,
+                             buckets: number): DensityBucket[] {
+  const times = prepared.times;
+  const noteCount = times.length;
+  if (!noteCount || buckets <= 0) return [];
+  const midValue = Math.ceil(perfectNoteScore * 0.1);
+  const first = times[0];
+  const span = Math.max(prepared.lastTime - first, 1e-9);
+  const out: DensityBucket[] = [];
+  let from = 0;
+  for (let i = 0; i < buckets; i++) {
+    const start = first + (span * i) / buckets;
+    const end = first + (span * (i + 1)) / buckets;
+    const to = i === buckets - 1 ? noteCount : bisectLeft(times, end, noteCount);
+    out.push({
+      start,
+      end,
+      notes: to - from,
+      weight: midValue * (prepared.midPrefix[to] - prepared.midPrefix[from])
+        + perfectNoteScore * (prepared.normalPrefix[to] - prepared.normalPrefix[from]),
+    });
+    from = to;
+  }
+  return out;
+}
+
 /** Index of the first time >= value, i.e. Python's bisect_left. */
 function bisectLeft(times: Float64Array, value: number, hi: number): number {
   let lo = 0;
@@ -149,9 +193,25 @@ function conditionMet(condition: unknown, rows: CardFacts[], combo: number): boo
  * normal note, and the Combo Bonus grows through the song. Reporting one number
  * called "coverage" would hide exactly the thing worth seeing.
  */
+export interface SkillWindow {
+  start: number;
+  end: number;
+  /** Chance this window actually fires; 1 for a Special, which always does. */
+  probability: number;
+  /** Score UP this window would apply, in percent. */
+  scoreUp: number;
+}
+
 export interface ChartMemberDetail {
   /** Which Special slot this member stands in. */
   slot: number;
+  /**
+   * The windows the scoring pass used, handed out rather than recomputed: a
+   * timeline drawn from a second derivation could disagree with the score it
+   * claims to explain.
+   */
+  specialWindow: SkillWindow;
+  activeWindows: SkillWindow[];
   /** Seconds the Special is up, over the song's length. */
   specialTimeCoverage: number;
   /** Notes inside the Special window, over the chart's note count. */
@@ -264,6 +324,7 @@ export function projectedScore(
     for (let i = 0; i < count; i++) {
       const [starts, ends, magnitudes, probabilities] = activeWindows[i];
       let expectedNotes = 0, expectedWeight = 0, expectedSeconds = 0, magnitude = 0;
+      const windows: SkillWindow[] = [];
       for (let w = 0; w < starts.length; w++) {
         const from = bisectLeft(times, starts[w], noteCount);
         const to = bisectLeft(times, ends[w], noteCount);
@@ -271,11 +332,20 @@ export function projectedScore(
         expectedWeight += weightOf(from, to) * probabilities[w];
         expectedSeconds += (ends[w] - starts[w]) * probabilities[w];
         if (magnitudes[w] > magnitude) magnitude = magnitudes[w];
+        windows.push({
+          start: starts[w], end: ends[w],
+          probability: probabilities[w], scoreUp: magnitudes[w],
+        });
       }
       const specialFrom = bisectLeft(times, specialStart[i], noteCount);
       const specialTo = bisectLeft(times, specialEnd[i], noteCount);
       detail.push({
         slot: i,
+        specialWindow: {
+          start: specialStart[i], end: specialEnd[i],
+          probability: 1, scoreUp: 0,
+        },
+        activeWindows: windows,
         specialTimeCoverage: Math.min(1, (specialEnd[i] - specialStart[i]) / songSeconds),
         specialNoteCoverage: (specialTo - specialFrom) / noteCount,
         specialScoreCoverage: weightOf(specialFrom, specialTo) / totalWeight,
