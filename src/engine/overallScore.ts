@@ -30,7 +30,6 @@ export interface MemberState {
   effectProbabilities: Float64Array;
   typeCounts: Map<string, number>;
   generationCounts: Map<string, number>;
-  baseSums: Float64Array;   // per-parameter totals across the five members
   memberPower: number;      // base parameters plus the Passive increment
   staticSupport: number;
   specialSupport: number;
@@ -45,7 +44,7 @@ export function makeMemberState(): MemberState {
     recipients: new Int32Array(5), eligible: new Int32Array(5),
     effectValues: new Float64Array(5), effectProbabilities: new Float64Array(5),
     typeCounts: new Map(), generationCounts: new Map(),
-    baseSums: new Float64Array(3), memberPower: 0,
+    memberPower: 0,
     staticSupport: 0, specialSupport: 0, activeScoreUp: 0,
   };
 }
@@ -175,12 +174,6 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
     }
   }
   state.memberPower = memberPower;
-  const { baseSums } = state;
-  for (let k = 0; k < 3; k++) {
-    let sum = 0;
-    for (let i = 0; i < 5; i++) sum += base[i * 3 + k];
-    baseSums[k] = sum;
-  }
 
   // Each Rate Up window contributes its own rate for its own duration, so the
   // average is sum(rate x duration) / song. A gated Rate Up goes through the
@@ -238,11 +231,16 @@ export function leaderPowerAndSupport(payload: OutfitPayload | null, state: Memb
       case 'score_support': support += value; break;
     }
   }
-  const { baseSums } = state;
+  // Each member rounds up on its own parameter, the level the reference
+  // simulator uses and the only one that can produce per-member figures.
+  const { base } = state;
   let total = state.memberPower;
-  if (rp) total += Math.ceil(baseSums[0] * rp / 100);
-  if (rt) total += Math.ceil(baseSums[1] * rt / 100);
-  if (rs) total += Math.ceil(baseSums[2] * rs / 100);
+  for (let i = 0; i < 5; i++) {
+    const at = i * 3;
+    if (rp) total += Math.ceil(base[at] * rp / 100);
+    if (rt) total += Math.ceil(base[at + 1] * rt / 100);
+    if (rs) total += Math.ceil(base[at + 2] * rs / 100);
+  }
   return [total, support];
 }
 
