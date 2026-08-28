@@ -4,6 +4,7 @@ import { CardTile, type TileDensity } from '../ui/CardTile';
 import { ATTRIBUTES, attributeStyle } from '../ui/theme';
 import type { AppState } from '../lib/appState';
 import type { CardJson } from '../engine/types';
+import { compareGenerations, searchIndex, sortedGenerations } from '../ui/members';
 
 type Sort = 'power' | 'name' | 'generation';
 
@@ -17,7 +18,7 @@ export function InventoryPage({ state }: { state: AppState }) {
   const [density, setDensity] = useState<TileDensity>('normal');
 
   const generations = useMemo(
-    () => (bundle ? [...new Set(bundle.cards.map((card) => card.generation))] : []),
+    () => (bundle ? sortedGenerations(bundle.cards) : []),
     [bundle],
   );
 
@@ -28,7 +29,7 @@ export function InventoryPage({ state }: { state: AppState }) {
       if (generation && card.generation !== generation) return false;
       if (attribute && card.type.toLowerCase() !== attribute) return false;
       if (ownedOnly && !inventory.get(card.id)?.owned) return false;
-      return !needle || `${card.name}${card.title}`.toLowerCase().includes(needle);
+      return !needle || searchIndex(card).includes(needle);
     });
     // Ranked on the card's own ceiling, not on the Bloom currently selected:
     // sorting by live values would reshuffle the grid under the cursor every
@@ -41,7 +42,7 @@ export function InventoryPage({ state }: { state: AppState }) {
       power: (a: CardJson, b: CardJson) => powerOf(b) - powerOf(a),
       name: (a: CardJson, b: CardJson) => a.name.localeCompare(b.name, 'ja'),
       generation: (a: CardJson, b: CardJson) =>
-        a.generation.localeCompare(b.generation, 'ja') || a.name.localeCompare(b.name, 'ja'),
+        compareGenerations(a.generation, b.generation) || a.name.localeCompare(b.name, 'ja'),
     }[sort];
     return [...rows].sort(compare);
     // `inventory` is read only for the owned-only filter; sorting deliberately

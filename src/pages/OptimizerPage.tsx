@@ -8,6 +8,7 @@ import { optimize } from '../lib/optimizerClient';
 import { PinPicker } from '../ui/PinPicker';
 import { TeamRow } from '../ui/TeamRow';
 import type { AppState } from '../lib/appState';
+import { memberName } from '../ui/members';
 
 export function OptimizerPage({ state, onOpenSong, onCompare }: {
   state: AppState; onOpenSong: (index: number) => void; onCompare: () => void;
@@ -198,7 +199,10 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
           </p>
           {run.pinned.length > 0 && (
             <p className="pinned-note">
-              這份結果限定包含：{run.pinned.map((id) => owned.find((card) => card.id === id)?.name ?? id).join('、')}
+              這份結果限定包含：{run.pinned.map((id) => {
+                const card = owned.find((row) => row.id === id);
+                return card ? memberName(card) : id;
+              }).join('、')}
             </p>
           )}
           {run.stamp !== stamp && (

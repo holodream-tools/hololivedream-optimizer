@@ -18,6 +18,7 @@ import type { AppState } from '../lib/appState';
 import type { CardJson } from '../engine/types';
 import type { ChartMeta, PreparedChart } from '../engine/chartScore';
 import type { SongRanked, SongScored } from '../engine/songOptimize';
+import { leaderName, memberName } from '../ui/members';
 
 type SongMode = 'team' | 'optimize';
 
@@ -217,7 +218,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                     title="隊伍依綜合推薦指數排名；選單裡的數字是指數，不是歌曲預估分。">
               {run.rows.map((row, index) => (
                 <option key={index} value={index}>
-                  #{index + 1} · {Math.round(row.value).toLocaleString()} · {row.members.map((card) => card.name).join('、')}
+                  #{index + 1} · {Math.round(row.value).toLocaleString()} · {row.members.map((card) => memberName(card)).join('、')}
                 </option>
               ))}
             </select>
@@ -357,13 +358,13 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                               {images?.url(card.id)
                                 ? <img src={images.url(card.id)} alt="" width={192} height={108} />
                                 : <span className="slot-noart">{style.label}</span>}
-                              <span className="order-name">{card.name}</span>
+                              <span className="order-name">{memberName(card)}</span>
                             </li>
                           );
                         })}
                       </ol>
                       <p className="song-source">
-                        隊長服裝：{unlockedLeaders[ranked[0].leaderIndex]?.name ?? '—'}
+                        隊長服裝：{(() => { const l = unlockedLeaders[ranked[0].leaderIndex]; return l ? leaderName(l) : '—'; })()}
                       </p>
 
                       <table className="cmp-table song-rank-table">
@@ -383,7 +384,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                               <td>{row.songScore.toLocaleString()}</td>
                               <td>#{row.genericRank}</td>
                               <td className="order-cell">
-                                {row.order.map((cardIndex) => owned[cardIndex]?.name ?? '?').join(' → ')}
+                                {row.order.map((cardIndex) => (owned[cardIndex] ? memberName(owned[cardIndex]) : '?')).join(' → ')}
                               </td>
                             </tr>
                           ))}
@@ -403,7 +404,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                           <p className="timeline-order">
                             最佳 Skill Order：
                             {ranked[timelineTeam].order
-                              .map((cardIndex, slot) => `${slot + 1}. ${owned[cardIndex]?.name ?? '?'}`)
+                              .map((cardIndex, slot) => `${slot + 1}. ${owned[cardIndex] ? memberName(owned[cardIndex]) : '?'}`)
                               .join('　')}
                           </p>
                           <SongTimeline
@@ -460,7 +461,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                           {images?.url(card.id)
                             ? <img src={images.url(card.id)} alt="" width={192} height={108} />
                             : <span className="slot-noart">{style.label}</span>}
-                          <span className="order-name">{card.name}</span>
+                          <span className="order-name">{memberName(card)}</span>
                           <span className="order-time">{outcome.prepared.specialTimes[slot].toFixed(1)}s</span>
                         </li>
                       );

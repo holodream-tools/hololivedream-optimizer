@@ -12,6 +12,7 @@
 import { activeText, passiveText, specialText } from './skillText';
 import { attributeStyle } from './theme';
 import type { CardJson } from '../engine/types';
+import { memberName } from './members';
 
 export type TileDensity = 'compact' | 'normal' | 'skills';
 
@@ -41,7 +42,7 @@ export function CardTile(props: CardTileProps) {
   };
 
   const bloomSteps = (
-    <div className="bloom-steps" role="group" aria-label={`${card.name} 的命座`}>
+    <div className="bloom-steps" role="group" aria-label={`${memberName(card)} 的命座`}>
       <span className="bloom-label">命座</span>
       {blooms.map((value) => (
         <button key={value} type="button" className={value === bloom ? 'is-on' : ''}
@@ -62,7 +63,7 @@ export function CardTile(props: CardTileProps) {
     return (
       <article className={`row${owned ? ' is-owned' : ''}`} style={accent}>
         <button type="button" className="row-face" aria-pressed={owned}
-                aria-label={`${owned ? '取消持有' : '設為持有'}：${card.name}`}
+                aria-label={`${owned ? '取消持有' : '設為持有'}：${memberName(card)}`}
                 onClick={props.onToggleOwned}>
           {portraitUrl
             ? <img src={portraitUrl} alt="" loading="lazy" />
@@ -70,7 +71,7 @@ export function CardTile(props: CardTileProps) {
           {owned && <span className="row-check" aria-hidden="true">✓</span>}
         </button>
         <div className="row-body">
-          <p className="row-name">{card.name}</p>
+          <p className="row-name">{memberName(card)}</p>
           <p className="row-title">{card.title || '—'}</p>
         </div>
         <span className="row-power">{power.toLocaleString()}</span>
@@ -82,7 +83,7 @@ export function CardTile(props: CardTileProps) {
   return (
     <article className={`tile${owned ? ' is-owned' : ''}`} style={accent}>
       <button type="button" className="tile-art" aria-pressed={owned}
-              aria-label={`${owned ? '取消持有' : '設為持有'}：${card.name}${card.title ? `「${card.title}」` : ''}`}
+              aria-label={`${owned ? '取消持有' : '設為持有'}：${memberName(card)}${card.title ? `「${card.title}」` : ''}`}
               onClick={props.onToggleOwned}>
         {imageUrl
           ? <img src={imageUrl} alt="" loading="lazy" width={192} height={108} />
@@ -92,7 +93,7 @@ export function CardTile(props: CardTileProps) {
       </button>
 
       <div className="tile-body">
-        <p className="tile-name">{card.name}</p>
+        <p className="tile-name">{memberName(card)}</p>
         <p className="tile-title">{card.title || '—'}</p>
         <p className="tile-meta">
           <span>{card.generation}</span>

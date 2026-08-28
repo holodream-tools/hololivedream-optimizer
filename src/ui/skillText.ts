@@ -7,7 +7,7 @@
 import type { OutfitPayload, SkillJson } from '../engine/types';
 
 const STAT_LABEL: Record<string, string> = {
-  all: '全能力', performance: 'Performance', technique: 'Technique', sense: 'Sense',
+  all: '全能力', performance: '表現力', technique: '技巧', sense: '品味',
   score_support: 'Score Support',
 };
 const ATTRIBUTE_LABEL: Record<string, string> = { cute: 'Cute', happy: 'Happy', pure: 'Pure' };

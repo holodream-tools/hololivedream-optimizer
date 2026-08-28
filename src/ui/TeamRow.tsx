@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { attributeStyle } from './theme';
 import { PassiveConditions } from './PassiveConditions';
 import type { CardJson, LeaderJson } from '../engine/types';
+import { leaderName, memberName } from './members';
 
 /** How the index was assembled, so the number is not just asserted. */
 export interface TeamBreakdown {
@@ -49,7 +50,7 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
   // is also one of the five. Showing it separately every time keeps one layout
   // for both cases, and makes the two roles legible rather than conflated.
   const leaderCardId = leader.id.replace(/^outfit:/, '');
-  const [leaderName, leaderCostume] = splitLeaderName(leader.name);
+  const [leaderTalent, leaderCostume] = splitLeaderName(leaderName(leader));
   const leaderAlsoPlays = members.some((card) => card.id === leaderCardId);
 
   return (
@@ -87,7 +88,7 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
           {imageUrl(leaderCardId)
             ? <img src={imageUrl(leaderCardId)} alt="" loading="lazy" width={192} height={108} />
             : <span className="team-noart">Outfit</span>}
-          <span className="team-member-name">{leaderName}</span>
+          <span className="team-member-name">{leaderTalent}</span>
           <span className="team-member-title">{leaderCostume || '—'}</span>
           <span className="leader-role">{leaderAlsoPlays ? '服裝＋上場' : '僅提供服裝'}</span>
         </li>
@@ -101,7 +102,7 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
               {url
                 ? <img src={url} alt="" loading="lazy" width={192} height={108} />
                 : <span className="team-noart">{style.label}</span>}
-              <span className="team-member-name">{card.name}</span>
+              <span className="team-member-name">{memberName(card)}</span>
               <span className="team-member-title">{card.title || '—'}</span>
             </li>
           );
@@ -111,7 +112,7 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
       {breakdown && open && (
         <div className="team-breakdown">
           <ol className="chain">
-            <li><span>五張卡基礎三圍</span><b>{breakdown.basePower.toLocaleString()}</b></li>
+            <li><span>五張卡基礎能力</span><b>{breakdown.basePower.toLocaleString()}</b></li>
             <li><span>Passive／Outfit 加成後</span><b>{breakdown.totalPower.toLocaleString()}</b></li>
             <li><span>× Active 期望倍率</span><b>{(value / (breakdown.totalPower || 1)).toFixed(3)}</b></li>
             <li className="is-result"><span>綜合推薦指數</span><b>{Math.round(value).toLocaleString()}</b></li>
@@ -124,7 +125,7 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
           </dl>
           {bloomOf && <PassiveConditions members={members} leader={leader} bloomOf={bloomOf} />}
           <p className="chain-note">
-            Score Support 沒有獨立分數，只在 Active 生效時放大它；Special 以 192 秒參考長度做時間平均。綜合推薦指數用 Generic 192 秒模型快速比較大量隊伍，是隊伍之間的相對比較值，非實際 Live 分數；實際分數請看「歌曲／順序」的指定歌曲理論預估分（Perfect 假設）。
+            Score Support 本身不會加分，只在 Active 生效時放大它；Special 以 192 秒的參考長度取平均。綜合推薦指數是用來快速比較大量隊伍的相對值，不是實際 Live 分數；想看分數請到「歌曲／順序」。
           </p>
         </div>
       )}

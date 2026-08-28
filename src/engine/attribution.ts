@@ -96,7 +96,7 @@ export function attributeGeneric(a: GenericView, b: GenericView): AttributionRep
 
   return finish(a.index, b.index, [
     {
-      label: '基礎三圍', unit: 'points',
+      label: '基礎能力', unit: 'points',
       log: power(a.basePower, b.basePower), a: a.basePower, b: b.basePower,
     },
     {
@@ -175,7 +175,7 @@ export function attributeChart(
 
   return finish(a.score, b.score, [
     {
-      label: '基礎三圍', unit: 'points',
+      label: '基礎能力', unit: 'points',
       log: power(a.view.basePower, b.view.basePower),
       a: a.view.basePower, b: b.view.basePower,
     },

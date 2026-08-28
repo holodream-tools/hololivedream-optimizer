@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react';
 import { activeText, outfitText, passiveText, specialText } from '../ui/skillText';
 import { ATTRIBUTES, attributeStyle } from '../ui/theme';
 import type { AppState } from '../lib/appState';
+import type { CardBundle, CardJson } from '../engine/types';
+import { memberName, searchIndex } from '../ui/members';
 
 export function LibraryPage({ state }: { state: AppState }) {
   const { bundle, images } = state;
@@ -16,19 +18,21 @@ export function LibraryPage({ state }: { state: AppState }) {
     const needle = query.trim().toLowerCase();
     return bundle.cards.filter((card) => {
       if (attribute && card.type.toLowerCase() !== attribute) return false;
-      return !needle || `${card.name}${card.title}`.toLowerCase().includes(needle);
+      return !needle || searchIndex(card).includes(needle);
     });
   }, [bundle, query, attribute]);
 
-  const selected = bundle?.cards.find((card) => card.id === (selectedId ?? visible[0]?.id));
-  const leader = bundle?.leaders.find((row) => row.id === `outfit:${selected?.id}`);
-  if (!bundle || !selected) return null;
+  if (!bundle) return null;
 
-  const blooms = Object.keys(selected.blooms).map(Number).sort((a, b) => a - b);
-  const shown = bloom !== null && selected.blooms[String(bloom)] ? bloom : selected.maxBloom;
-  const data = selected.blooms[String(shown)];
-  const style = attributeStyle(selected.type);
-  const power = data ? data.performance + data.technique + data.sense : 0;
+  /**
+   * Always a card the current filter actually shows, or nothing.
+   *
+   * This used to resolve against the whole catalogue and the page returned null
+   * when it came up empty -- which is what a search matching nothing produced
+   * before anything had been selected, so typing one letter unmounted the entire
+   * page rather than showing "no matches".
+   */
+  const selected = visible.find((card) => card.id === selectedId) ?? visible[0] ?? null;
 
   return (
     <>
@@ -58,14 +62,15 @@ export function LibraryPage({ state }: { state: AppState }) {
 
       <div className="library-split">
         <ol className="card-list">
+          {!visible.length && <li className="card-list-empty">沒有符合的卡片。</li>}
           {visible.map((card) => {
             const rowStyle = attributeStyle(card.type);
             return (
               <li key={card.id}>
-                <button className={card.id === selected.id ? 'is-on' : ''}
+                <button className={card.id === selected?.id ? 'is-on' : ''}
                         style={{ ['--accent' as string]: rowStyle.accent }}
                         onClick={() => { setSelectedId(card.id); setBloom(null); }}>
-                  <span className="card-list-name">{card.name}</span>
+                  <span className="card-list-name">{memberName(card)}</span>
                   <span className="card-list-title">{card.title || '—'}</span>
                 </button>
               </li>
@@ -73,6 +78,27 @@ export function LibraryPage({ state }: { state: AppState }) {
           })}
         </ol>
 
+        {selected
+          ? <CardDetail card={selected} bundle={bundle} images={images} bloom={bloom} setBloom={setBloom} />
+          : <p className="empty">換個關鍵字試試，或按「全部」清掉屬性篩選。</p>}
+      </div>
+    </>
+  );
+}
+
+/** The right-hand panel. Split out so it only ever runs with a card in hand. */
+function CardDetail({ card: selected, bundle, images, bloom, setBloom }: {
+  card: CardJson; bundle: CardBundle; images: AppState['images'];
+  bloom: number | null; setBloom: (value: number) => void;
+}) {
+  const leader = bundle.leaders.find((row) => row.id === `outfit:${selected.id}`);
+  const blooms = Object.keys(selected.blooms).map(Number).sort((a, b) => a - b);
+  const shown = bloom !== null && selected.blooms[String(bloom)] ? bloom : selected.maxBloom;
+  const data = selected.blooms[String(shown)];
+  const style = attributeStyle(selected.type);
+  const power = data ? data.performance + data.technique + data.sense : 0;
+
+  return (
         <article className="detail" style={{ ['--accent' as string]: style.accent, ['--accent-soft' as string]: style.soft, ['--accent-line' as string]: style.line }}>
           {images?.url(selected.id)
             ? <img className="detail-art" src={images.url(selected.id)} alt="" width={192} height={108} />
@@ -80,7 +106,7 @@ export function LibraryPage({ state }: { state: AppState }) {
 
           <header className="detail-head">
             <p className="detail-badge">{style.label} · {selected.generation}</p>
-            <h3>{selected.name}</h3>
+            <h3>{memberName(selected)}</h3>
             <p className="detail-title">{selected.title || '—'}</p>
           </header>
 
@@ -92,9 +118,9 @@ export function LibraryPage({ state }: { state: AppState }) {
           </div>
 
           <dl className="detail-stats">
-            <div><dt>Performance</dt><dd>{data?.performance.toLocaleString() ?? '—'}</dd></div>
-            <div><dt>Technique</dt><dd>{data?.technique.toLocaleString() ?? '—'}</dd></div>
-            <div><dt>Sense</dt><dd>{data?.sense.toLocaleString() ?? '—'}</dd></div>
+            <div><dt>表現力</dt><dd>{data?.performance.toLocaleString() ?? '—'}</dd></div>
+            <div><dt>技巧</dt><dd>{data?.technique.toLocaleString() ?? '—'}</dd></div>
+            <div><dt>品味</dt><dd>{data?.sense.toLocaleString() ?? '—'}</dd></div>
             <div className="is-total"><dt>總合力</dt><dd>{power.toLocaleString()}</dd></div>
           </dl>
 
@@ -112,7 +138,5 @@ export function LibraryPage({ state }: { state: AppState }) {
             ))}
           </div>
         </article>
-      </div>
-    </>
   );
 }

@@ -7,6 +7,7 @@ import { outfitText } from '../ui/skillText';
 import { PassiveConditions } from '../ui/PassiveConditions';
 import { shareUrl } from '../lib/share';
 import type { AppState } from '../lib/appState';
+import { memberName, leaderName, searchIndex } from '../ui/members';
 
 export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompare: () => void }) {
   const {
@@ -63,7 +64,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
 
   const candidates = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return owned.filter((card) => !needle || `${card.name}${card.title}`.toLowerCase().includes(needle));
+    return owned.filter((card) => !needle || searchIndex(card).includes(needle));
   }, [owned, query]);
 
   if (!bundle) return null;
@@ -103,7 +104,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
           <select value={leaderId} onChange={(event) => setLeaderId(event.target.value)}>
             <option value="">選擇 Leader Outfit…</option>
             {unlockedLeaders.map((leader) => (
-              <option key={leader.id} value={leader.id}>{leader.name}</option>
+              <option key={leader.id} value={leader.id}>{leaderName(leader)}</option>
             ))}
           </select>
           <p className="leader-effect">
@@ -134,7 +135,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
               {images?.url(card.id)
                 ? <img src={images.url(card.id)} alt="" width={192} height={108} />
                 : <span className="slot-noart">{style.label}</span>}
-              <span className="slot-name">{card.name}</span>
+              <span className="slot-name">{memberName(card)}</span>
               <span className="slot-title">{card.title || '—'}</span>
             </button>
           );
@@ -220,7 +221,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
               {images?.url(card.id)
                 ? <img src={images.url(card.id)} alt="" width={192} height={108} />
                 : <span className="slot-noart">{style.label}</span>}
-              <span className="pick-name">{card.name}</span>
+              <span className="pick-name">{memberName(card)}</span>
               <span className="pick-title">{card.title || '—'}</span>
             </button>
           );

@@ -16,6 +16,7 @@ import { chartDensity } from '../engine/chartScore';
 import { attributeStyle } from './theme';
 import type { CardJson } from '../engine/types';
 import type { ChartMemberDetail, ChartScoreResult, PreparedChart } from '../engine/chartScore';
+import { memberName } from './members';
 
 /** viewBox units. The SVG scales; a min-width keeps it legible on a phone. */
 const WIDTH = 1000;
@@ -110,7 +111,7 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
                   站位 {index + 1}
                 </text>
                 <text x={4} y={top + 27} className="tl-name">
-                  {card ? card.name : '—'}
+                  {card ? memberName(card) : '—'}
                 </text>
                 <line x1={GUTTER} y1={top + ROW_H - 4} x2={WIDTH - RIGHT} y2={top + ROW_H - 4}
                       className="tl-rowline" />
@@ -169,7 +170,7 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
                   <th scope="row" style={style ? { color: SLOT_COLORS[index % 5] } : undefined}>
                     {index + 1}
                   </th>
-                  <td className="tl-cell-name">{card ? card.name : '—'}</td>
+                  <td className="tl-cell-name">{card ? memberName(card) : '—'}</td>
                   <td>
                     {row.specialWindow.start.toFixed(0)}–{row.specialWindow.end.toFixed(0)}s
                     {row.specialSupport ? ` · +${row.specialSupport.toFixed(0)}` : ''}

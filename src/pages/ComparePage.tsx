@@ -16,6 +16,7 @@ import { attributeStyle } from '../ui/theme';
 import type { AppState, ComparePick } from '../lib/appState';
 import type { BestOrder, GenericView } from '../engine/compare';
 import type { AttributionReport, AttributionRow } from '../engine/attribution';
+import { leaderName, memberName } from '../ui/members';
 
 const SIDE = ['A', 'B'] as const;
 
@@ -169,8 +170,8 @@ export function ComparePage({ state }: { state: AppState }) {
     if (!a || !b) return null;
     const names = new Map<string, string>();
     for (const side of [a, b]) {
-      for (const card of side.pick.members) names.set(card.id, card.name);
-      names.set(side.pick.leader.id, side.pick.leader.name);
+      for (const card of side.pick.members) names.set(card.id, memberName(card));
+      names.set(side.pick.leader.id, leaderName(side.pick.leader));
     }
     return singleDifference(
       a.pick.members.map((card) => card.id), b.pick.members.map((card) => card.id),
@@ -187,7 +188,7 @@ export function ComparePage({ state }: { state: AppState }) {
         <div>
           <h2>隊伍比較</h2>
           <p className="page-sub">
-            A / B 並排，每一列都標出哪一隊較高，但兩邊的原始數值都保留。所有數字都由排行榜同一套計算函式產生。
+            A / B 並排，每一列都標出哪一隊較高，兩邊的原始數值和差距都會留著。所有數字都跟排行榜用同一套算法。
           </p>
         </div>
       </div>
@@ -207,7 +208,7 @@ export function ComparePage({ state }: { state: AppState }) {
                 <ol className="cmp-team">
                   <li className="is-leader">
                     <span className="cmp-role">隊長服裝</span>
-                    <span className="cmp-name">{side.pick.leader.name}</span>
+                    <span className="cmp-name">{leaderName(side.pick.leader)}</span>
                   </li>
                   {side.pick.members.map((card) => {
                     const style = attributeStyle(card.type);
@@ -218,7 +219,7 @@ export function ComparePage({ state }: { state: AppState }) {
                         {url
                           ? <img src={url} alt="" loading="lazy" width={192} height={108} />
                           : <span className="cmp-noart">{style.label}</span>}
-                        <span className="cmp-name">{card.name}</span>
+                        <span className="cmp-name">{memberName(card)}</span>
                         <span className="cmp-title">{card.title || '—'}</span>
                       </li>
                     );
@@ -247,7 +248,7 @@ export function ComparePage({ state }: { state: AppState }) {
                   （{pct(b.chart.score - a.chart.score, a.chart.score)}）
                 </>
               )}
-              。這是兩支合法隊伍的直接差額，不需要任何反事實假設。
+              。兩隊都是完整的五人隊，這是直接相減的差額，不用任何假設。
             </p>
           )}
 
@@ -257,16 +258,16 @@ export function ComparePage({ state }: { state: AppState }) {
               <tr><th scope="col">項目</th><th scope="col">A</th><th scope="col">B</th><th scope="col">差距</th></tr>
             </thead>
             <tbody>
-              <DiffRow label="基礎總能力" a={a.generic.basePower} b={b.generic.basePower} format={int} />
+              <DiffRow label="基礎能力" a={a.generic.basePower} b={b.generic.basePower} format={int} />
               <DiffRow label="Passive 能力加成" a={a.generic.passiveGain} b={b.generic.passiveGain} format={int} />
               <DiffRow label="Outfit 能力加成" a={a.generic.outfitGain} b={b.generic.outfitGain} format={int} />
               <DiffRow label="最終總合力" a={a.generic.totalPower} b={b.generic.totalPower} format={int} />
               <DiffRow label="Passive Score Support" a={a.generic.passiveSupport} b={b.generic.passiveSupport} format={one} />
               <DiffRow label="Special Score Support" a={a.generic.specialSupport} b={b.generic.specialSupport} format={one}
-                       hint="以 192 秒參考長度做時間平均" />
+                       hint="以 192 秒的參考長度取平均" />
               <DiffRow label="Outfit Score Support" a={a.generic.leaderSupport} b={b.generic.leaderSupport} format={one} />
               <DiffRow label="SAR（技能發動率）" a={a.generic.sarPoints} b={b.generic.sarPoints} format={one}
-                       hint="各 Rate Up 以自身持續時間對 192 秒加權平均" />
+                       hint="每個 Rate Up 依自己的持續時間，對 192 秒取平均" />
               <DiffRow label="Active 平均效果" a={a.generic.activeScoreUp} b={b.generic.activeScoreUp} format={one} />
               <DiffRow label="Active 時間覆蓋" a={a.generic.activeTimeCoverage} b={b.generic.activeTimeCoverage}
                        format={share} hint="至少一個 Active 生效的時間比例" />
@@ -274,7 +275,7 @@ export function ComparePage({ state }: { state: AppState }) {
               {chart && a.chart && b.chart && (
                 <>
                   <DiffRow label="指定歌曲預估分" a={a.chart.score} b={b.chart.score} format={int}
-                           hint="Perfect 假設，各自的最佳站位" />
+                           hint="Perfect 全連假設，兩邊各自用自己的最佳站位" />
                   <DiffRow label="Active 實際貢獻" a={a.chart.detail.activeBonus} b={b.chart.detail.activeBonus} format={one} />
                 </>
               )}
@@ -286,9 +287,9 @@ export function ComparePage({ state }: { state: AppState }) {
             <AttributionPanel
               title="差異歸因 · 綜合推薦指數"
               report={genericAttribution}
-              note={'這是「歸因貢獻」，不是遊戲提供的數值：指數是乘積，百分比本來不能相加，'
-                + '所以這裡用對數分解把總差距拆到各項，各項相加剛好等於上面的總差距。'
-                + 'Score Support 沒有獨立分數，只放大有發動的 Active，因此兩者的交互項算在 Support 上。'}
+              note={'以下是「歸因貢獻」，不是遊戲給的數字。指數是相乘出來的，百分比本來不能直接相加，'
+                + '所以這裡用對數的方式拆開，拆出來的各項加起來剛好等於上面的總差距。'
+                + 'Score Support 本身不會加分，只會放大有發動的 Active，所以兩者相乘的那部分算在 Support 上。'}
             />
           )}
 
@@ -307,7 +308,7 @@ export function ComparePage({ state }: { state: AppState }) {
               </label>
             ) : (
               <button className="ghost" onClick={loadCharts} disabled={chartsLoading}>
-                {chartsLoading ? '正在載入譜面資料…' : '載入譜面，加上歌曲分數比較'}
+                {chartsLoading ? '正在載入譜面資料…' : '載入譜面，一起比較歌曲分數'}
               </button>
             )}
           </section>
@@ -320,17 +321,17 @@ export function ComparePage({ state }: { state: AppState }) {
               <AttributionPanel
                 title={`差異歸因 · ${chart.meta.title}`}
                 report={chartAttribution}
-                note={'歌曲模式把 Active、Special、SAR 與 Score Support 在每個音符當下套用，'
-                  + '沒有可以拆開的乘積結構，所以它們合成「本曲技能實際貢獻」一項；'
-                  + '下面的覆蓋率是解釋這一項落在哪裡的診斷，不是歸因項，也不要和時間軸上的 ↑ 箭頭混用'
-                  + '——那個箭頭比的是覆蓋到的音符值不值錢，與這裡的貢獻百分比是兩回事。'}
+                note={'歌曲模式是在每個音符當下套用 Active、Special、SAR 和 Score Support，'
+                  + '沒辦法像上面那樣拆開，所以合併成「本曲技能實際貢獻」一項。'
+                  + '下面的覆蓋率只是幫你看這一項發生在哪裡，不算在歸因裡，也不要跟時間軸上的 ↑ 箭頭混在一起看'
+                  + '——那個箭頭講的是蓋到的音符值不值錢，跟這裡的貢獻百分比是兩回事。'}
               />
               <div className="cmp-scroll">
                 <table className="cmp-table">
                   <thead>
                     <tr>
                       {/* Five members' windows overlap, so these sum past 100%. */}
-                      <th scope="col">本曲覆蓋（五人合計，可重疊故可能超過 100%）</th>
+                      <th scope="col">本曲覆蓋（五人合計，會互相重疊，所以可能超過 100%）</th>
                       <th scope="col">A</th><th scope="col">B</th><th scope="col">差距</th>
                     </tr>
                   </thead>
@@ -372,7 +373,7 @@ export function ComparePage({ state }: { state: AppState }) {
                       return (
                         <li key={key}>
                           <div className="cmp-member-head">
-                            <span className="cmp-name">{card.name}</span>
+                            <span className="cmp-name">{memberName(card)}</span>
                             <span className="cmp-loo">
                               指數 −{int(side.loo[index])}
                               {side.chartLoo && <> · 歌曲 −{int(side.chartLoo[index])}</>}
@@ -384,7 +385,7 @@ export function ComparePage({ state }: { state: AppState }) {
                           </div>
                           {expanded && (
                             <dl className="cmp-direct">
-                              <div><dt>三圍</dt><dd>{int(direct.base)}</dd></div>
+                              <div><dt>三項能力合計</dt><dd>{int(direct.base)}</dd></div>
                               <div><dt>Passive 受益</dt><dd>+{int(direct.passiveGain)}</dd></div>
                               <div><dt>Outfit 受益</dt><dd>+{int(direct.outfitGain)}</dd></div>
                               <div><dt>Passive Score Support</dt><dd>+{one(direct.passiveSupport)}</dd></div>
@@ -411,7 +412,7 @@ export function ComparePage({ state }: { state: AppState }) {
                   {side.chart && (
                     <p className="cmp-order">
                       最佳站位：{side.chart.order.map((memberIndex, position) =>
-                        `${position + 1}. ${side.pick.members[memberIndex].name}`).join('　')}
+                        `${position + 1}. ${memberName(side.pick.members[memberIndex])}`).join('　')}
                     </p>
                   )}
                 </section>

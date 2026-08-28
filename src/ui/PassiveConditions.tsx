@@ -13,6 +13,7 @@
 import { conditionMet } from '../engine/overallScore';
 import { passiveText, outfitText } from './skillText';
 import type { CardJson, LeaderJson, OutfitCondition } from '../engine/types';
+import { leaderName, memberName } from './members';
 
 export interface PassiveConditionsProps {
   members: CardJson[];
@@ -66,7 +67,7 @@ export function PassiveConditions({ members, leader, bloomOf }: PassiveCondition
     const met = conditionMet(condition, typeCounts, generationCounts);
     rows.push({
       key: `card-${card.id}`,
-      who: card.name,
+      who: memberName(card),
       text: passiveText(passive) ?? '——',
       met,
       reason: met ? '' : shortfall(condition, typeCounts, generationCounts),
@@ -80,7 +81,7 @@ export function PassiveConditions({ members, leader, bloomOf }: PassiveCondition
     const met = conditionMet(outfitCondition, typeCounts, generationCounts);
     rows.push({
       key: 'outfit',
-      who: `${leader.name}（隊長服裝）`,
+      who: `${leaderName(leader)}（隊長服裝）`,
       text: outfitText(payload) ?? '——',
       met,
       reason: met ? '' : shortfall(outfitCondition, typeCounts, generationCounts),

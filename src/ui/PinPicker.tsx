@@ -8,6 +8,7 @@
 import { useMemo, useState } from 'react';
 import { attributeStyle } from './theme';
 import type { CardJson } from '../engine/types';
+import { memberName, searchIndex } from './members';
 
 export interface PinPickerProps {
   owned: CardJson[];
@@ -24,7 +25,7 @@ export function PinPicker({ owned, pinned, max, imageUrl, onToggle, onClear }: P
 
   const candidates = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return owned.filter((card) => !needle || `${card.name}${card.title}`.toLowerCase().includes(needle));
+    return owned.filter((card) => !needle || searchIndex(card).includes(needle));
   }, [owned, query]);
 
   const pinnedCards = pinned
@@ -55,9 +56,9 @@ export function PinPicker({ owned, pinned, max, imageUrl, onToggle, onClear }: P
               <li key={card.id} style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}>
                 {url ? <img src={url} alt="" width={192} height={108} />
                      : <span className="slot-noart">{style.label}</span>}
-                <span className="pin-name">{card.name}</span>
+                <span className="pin-name">{memberName(card)}</span>
                 <button className="pin-remove" onClick={() => onToggle(card.id)}
-                        aria-label={`取消指定 ${card.name}`}>×</button>
+                        aria-label={`取消指定 ${memberName(card)}`}>×</button>
               </li>
             );
           })}
@@ -78,10 +79,10 @@ export function PinPicker({ owned, pinned, max, imageUrl, onToggle, onClear }: P
                         style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line, ['--accent-soft' as string]: style.soft }}
                         disabled={!chosen && pinned.length >= max}
                         onClick={() => onToggle(card.id)}
-                        title={`${card.name}${card.title ? `「${card.title}」` : ''}`}>
+                        title={`${memberName(card)}${card.title ? `「${card.title}」` : ''}`}>
                   {url ? <img src={url} alt="" width={192} height={108} />
                        : <span className="slot-noart">{style.label}</span>}
-                  <span className="pin-option-name">{card.name}</span>
+                  <span className="pin-option-name">{memberName(card)}</span>
                 </button>
               );
             })}
