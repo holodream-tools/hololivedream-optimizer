@@ -13,10 +13,12 @@ import {
   FUNNEL_DEPTHS, distinctFormations, rankSongResults, scoreCandidates, upliftOverGenericBest,
 } from '../engine/songOptimize';
 import { SongTimeline } from '../ui/SongTimeline';
+import { ShareCardButton } from '../ui/ShareCardButton';
 import { DIFFICULTIES, attributeStyle, difficultyStyle, duration } from '../ui/theme';
 import type { AppState } from '../lib/appState';
 import type { CardJson } from '../engine/types';
-import type { ChartMeta, PreparedChart } from '../engine/chartScore';
+import type { ChartMemberDetail, ChartMeta, PreparedChart } from '../engine/chartScore';
+import type { ShareCardData, ShareCardMember } from '../lib/shareCard';
 import type { SongRanked, SongScored } from '../engine/songOptimize';
 import { leaderName, memberName } from '../ui/members';
 
@@ -136,8 +138,107 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
     // Every standing order is one permutation of the five Special slots; the
     // search lives in the engine so both modes rank orders the same way.
     const best = bestOrder(facts, [0, 1, 2, 3, 4], payload, prepared);
-    return { meta, prepared, best, worst: best.worst, detail: best.detail, noteCount: count };
+    // Formatted once. The panel below and the share card both render from this,
+    // so the picture cannot report a figure this page is not reporting.
+    const figures = [
+      { label: '加成後總合力', value: best.detail.totalPower.toLocaleString() },
+      { label: 'PERFECT 基礎分', value: best.detail.perfectNoteScore.toLocaleString() },
+      { label: '譜面除數', value: best.detail.scoreRatio.toFixed(2) },
+      { label: '主動技能實際貢獻', value: `+${best.detail.activeBonus.toFixed(1)}%` },
+    ];
+    return {
+      meta, prepared, best, worst: best.worst, detail: best.detail, noteCount: count, figures,
+    };
   }, [team, chartMeta, chartPrepared, charts, chartKey, inventory]);
+
+  /**
+   * The chart line under a song title, in the words the page's own header uses.
+   */
+  const chartLine = (chart: ChartMeta, notes: number) =>
+    `${chart.difficulty} Lv.${chart.difficultyLevel} · ${notes.toLocaleString()} notes`
+    + ` · ${Math.round(chart.playingSeconds ?? 0)} 秒`;
+
+  /**
+   * What this member's Special and Active did on this chart.
+   *
+   * The same two things the timeline table says about them, from the same
+   * detail object it reads -- not a summary of the team, because the coverages
+   * are per member and averaging them would describe nobody.
+   */
+  const coverage = (row: ChartMemberDetail): string[] => [
+    `特殊 ${row.specialWindow.start.toFixed(0)}–${row.specialWindow.end.toFixed(0)}s`
+      + (row.specialRate ? ` · SAR +${row.specialRate.toFixed(0)}` : ''),
+    `主動分數覆蓋 ${(row.activeScoreCoverage * 100).toFixed(1)}%`,
+  ];
+
+  const tile = (card: CardJson, slot: number, row: ChartMemberDetail | undefined,
+                leaderCardId: string): ShareCardMember => ({
+    cardId: card.id,
+    name: memberName(card),
+    title: card.title || '',
+    type: card.type,
+    bloom: inventory.get(card.id)?.bloom ?? card.maxBloom,
+    slot: `站位 ${slot + 1}`,
+    notes: row ? coverage(row) : undefined,
+    isLeader: card.id === leaderCardId,
+  });
+
+  const leaderLine = (leader: { id: string; name: string; talent?: string },
+                      members: CardJson[]) => {
+    const cardId = leader.id.replace(/^outfit:/, '');
+    const alsoPlays = members.some((card) => card.id === cardId);
+    return `隊長服裝：${leaderName(leader as never)}（${alsoPlays ? '服裝＋上場' : '僅提供服裝'}）`;
+  };
+
+  /** The picked team on this chart, exactly as the panel above reports it. */
+  const teamCard = (): ShareCardData | null => {
+    if (!outcome || !team) return null;
+    const rows = outcome.detail.members ?? [];
+    const leaderCardId = team.leader.id.replace(/^outfit:/, '');
+    return {
+      subject: String(outcome.meta.title),
+      subjectMeta: chartLine(outcome.meta, outcome.noteCount),
+      headline: {
+        label: '指定歌曲理論預估分（Perfect 假設）',
+        value: outcome.best.score.toLocaleString(),
+      },
+      stats: outcome.figures,
+      leaderLine: leaderLine(team.leader, team.members),
+      members: outcome.best.order.map((memberIndex, slot) =>
+        tile(team.members[memberIndex], slot, rows[slot], leaderCardId)),
+    };
+  };
+
+  /**
+   * Whichever ranked team the timeline is drawing -- the one being looked at,
+   * not necessarily the winner.
+   */
+  const rankedCard = (): ShareCardData | null => {
+    const row = ranked?.[timelineTeam];
+    if (!row || !chartMeta) return null;
+    const leader = unlockedLeaders[row.leaderIndex];
+    const members = row.order.map((cardIndex) => owned[cardIndex]);
+    if (!leader || members.some((card) => !card)) return null;
+    const rows = row.detail.members ?? [];
+    const leaderCardId = leader.id.replace(/^outfit:/, '');
+    // Only what this mode actually reports: the uplift describes the top team,
+    // so it belongs on the top team's card and on no other.
+    const stats = [
+      { label: '歌曲排名', value: `#${row.songRank}` },
+      { label: '通用排名', value: `#${row.genericRank}` },
+    ];
+    if (timelineTeam === 0 && uplift) {
+      stats.push({ label: '比通用最佳隊高', value: `${(uplift.uplift * 100).toFixed(2)}%` });
+    }
+    return {
+      subject: String(chartMeta.title),
+      subjectMeta: chartLine(chartMeta, chartMeta.fullComboNoteCount ?? 0),
+      headline: { label: '預估分（Perfect 假設）', value: row.songScore.toLocaleString() },
+      stats,
+      leaderLine: leaderLine(leader, members),
+      members: members.map((card, slot) => tile(card, slot, rows[slot], leaderCardId)),
+    };
+  };
 
   // A result belongs to one song at one depth; changing either invalidates it.
   useEffect(() => {
@@ -401,6 +502,12 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                               {' '}通用 #{ranked[timelineTeam].genericRank}
                             </span>
                           </h4>
+                          {/* This block names one ranked team, so the card made
+                              here is that team and not the leaderboard's top. */}
+                          <div className="song-actions">
+                            <ShareCardButton data={rankedCard} images={images}
+                                             filename="hololive-dreams-song.png" />
+                          </div>
                           <p className="timeline-order">
                             最佳技能順序：
                             {ranked[timelineTeam].order
@@ -451,6 +558,11 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                     </p>
                   </div>
 
+                  <div className="song-actions">
+                    <ShareCardButton data={teamCard} images={images}
+                                     filename="hololive-dreams-song.png" />
+                  </div>
+
                   <ol className="order-line">
                     {outcome.best.order.map((memberIndex, slot) => {
                       const card: CardJson = team!.members[memberIndex];
@@ -469,10 +581,9 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                   </ol>
 
                   <dl className="breakdown-parts">
-                    <div><dt>加成後總合力</dt><dd>{outcome.detail.totalPower.toLocaleString()}</dd></div>
-                    <div><dt>PERFECT 基礎分</dt><dd>{outcome.detail.perfectNoteScore.toLocaleString()}</dd></div>
-                    <div><dt>譜面除數</dt><dd>{outcome.detail.scoreRatio.toFixed(2)}</dd></div>
-                    <div><dt>主動技能實際貢獻</dt><dd>+{outcome.detail.activeBonus.toFixed(1)}%</dd></div>
+                    {outcome.figures.map((row) => (
+                      <div key={row.label}><dt>{row.label}</dt><dd>{row.value}</dd></div>
+                    ))}
                   </dl>
                   <p className="song-source">除數來源：{outcome.detail.ratioSource}</p>
                   <p className="metric-note">

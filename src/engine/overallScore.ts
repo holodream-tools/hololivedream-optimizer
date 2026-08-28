@@ -237,16 +237,43 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
 }
 
 /**
+ * The three parameters behind `memberPower`, read out separately.
+ *
+ * Not a second formula and not a second pass over the data: the same base
+ * values, the same accumulated rates and the same per-parameter rounding
+ * `memberPart` has already applied, summed per parameter instead of over all
+ * three. sum(out) is exactly `state.memberPower`.
+ *
+ * Nothing on the ranking path calls this; it exists so a display can show what
+ * the total is made of without deriving it a second way.
+ */
+export function memberStatTotals(state: MemberState, out: Float64Array): Float64Array {
+  out[0] = 0; out[1] = 0; out[2] = 0;
+  const { base, rates, count } = state;
+  for (let i = 0; i < count; i++) {
+    for (let k = 0; k < 3; k++) {
+      const at = i * 3 + k;
+      out[k] += base[at] + (rates[at] ? Math.ceil(base[at] * rates[at] / 100) : 0);
+    }
+  }
+  return out;
+}
+
+/**
  * Apply one Outfit as a separate additive term over the base parameters.
  *
  * `perMember` is an optional out-parameter for the compare page, which needs
- * each member's own increment. The ranking path passes nothing and pays one
- * branch per member for it, rather than a second copy of the rounding rule.
+ * each member's own increment, and `perStat` one for the share card, which
+ * needs the same increments grouped by parameter instead. The ranking path
+ * passes neither and pays one branch each for them, rather than a second copy
+ * of the rounding rule.
  */
 export function leaderPowerAndSupport(payload: OutfitPayload | null, state: MemberState,
-                                      perMember?: Float64Array): [number, number] {
+                                      perMember?: Float64Array,
+                                      perStat?: Float64Array): [number, number] {
   if (!payload || !conditionMet(payload.condition, state.typeCounts, state.generationCounts)) {
     if (perMember) perMember.fill(0);
+    if (perStat) perStat.fill(0);
     return [state.memberPower, 0];
   }
   const effects = payload.effects ?? [];
@@ -267,13 +294,15 @@ export function leaderPowerAndSupport(payload: OutfitPayload | null, state: Memb
   // simulator uses and the only one that can produce per-member figures.
   const { base, count } = state;
   let total = state.memberPower;
+  if (perStat) perStat.fill(0);
   for (let i = 0; i < count; i++) {
     const at = i * 3;
-    // Integer increments, so grouping them per member cannot move a bit.
+    // Integer increments, so grouping them per member cannot move a bit -- nor
+    // can grouping the same three terms per parameter instead.
     let gain = 0;
-    if (rp) gain += Math.ceil(base[at] * rp / 100);
-    if (rt) gain += Math.ceil(base[at + 1] * rt / 100);
-    if (rs) gain += Math.ceil(base[at + 2] * rs / 100);
+    if (rp) { const step = Math.ceil(base[at] * rp / 100); gain += step; if (perStat) perStat[0] += step; }
+    if (rt) { const step = Math.ceil(base[at + 1] * rt / 100); gain += step; if (perStat) perStat[1] += step; }
+    if (rs) { const step = Math.ceil(base[at + 2] * rs / 100); gain += step; if (perStat) perStat[2] += step; }
     total += gain;
     if (perMember) perMember[i] = gain;
   }

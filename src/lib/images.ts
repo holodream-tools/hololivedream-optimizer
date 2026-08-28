@@ -64,6 +64,29 @@ export class ImageSource {
     return this.portraits.byCard[cardId] ?? this.portraits.byTalentSlug[talentSlug(cardId)];
   }
 
+  /**
+   * The same portrait, asked for at a usable size.
+   *
+   * The manifest's URLs carry a width parameter because the host serves its
+   * images through a resizing endpoint, and the thumbnails it hands the card
+   * list are 67px wide -- fine at the size a row shows them, far too small for
+   * a picture posted at 1200px. Rewriting that one parameter asks the same
+   * source for the same portrait; it is not a second mapping, and a URL shaped
+   * any other way comes back untouched.
+   */
+  portraitAt(cardId: string, width: number): string | undefined {
+    const url = this.portrait(cardId);
+    if (!url) return undefined;
+    try {
+      const parsed = new URL(url);
+      if (!parsed.searchParams.has('w')) return url;
+      parsed.searchParams.set('w', String(width));
+      return parsed.toString();
+    } catch {
+      return url;   // Not a URL this can rewrite; the original still works.
+    }
+  }
+
   /** Where a given picture came from, for attribution or auditing. */
   sourceUrl(cardId: string): string | undefined {
     return this.art[cardId]?.sourceUrl;

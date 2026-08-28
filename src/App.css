@@ -469,7 +469,7 @@ button:disabled { opacity: .45; cursor: default; }
 /* Smaller than the sweep's Run button: this is a page action, not the point of
    the page, and .primary at full size would outrank the team itself. */
 .team-share-button { padding: 8px 18px; font-size: 14px; }
-/* The 分享圖卡 fallbacks, shown only when the browser cannot hand the image to
+/* The 分享圖卡 fallbacks, shown only when the browser cannot hand the picture to
    a share sheet. Anchored to the button, right-aligned so it cannot run off
    the edge on a narrow screen, and using the same surface, border and radius
    as every other panel on the site. */
@@ -486,6 +486,16 @@ button:disabled { opacity: .45; cursor: default; }
 .card-share-menu a:hover, .card-share-menu button:hover {
   background: var(--surface-2); color: var(--ink); border-color: transparent;
 }
+
+/* What the card button says back. It sits under its own button rather than in
+   the row's note line, because the same button appears on the song page where
+   there is no such line. */
+.card-share-note { position: absolute; top: calc(100% + 6px); right: 0;
+                   margin: 0; white-space: nowrap; font-size: 12.5px;
+                   font-weight: 650; color: var(--brand); }
+/* Where a song result offers its card: its own line under the block it belongs
+   to, so it never sits between a number and the words explaining it. */
+.song-actions { display: flex; justify-content: flex-end; margin: 0 0 14px; }
 
 /* The whole line, so it cannot squeeze the buttons; it clears itself after a
    moment, and role=status announces it without stealing focus. */
