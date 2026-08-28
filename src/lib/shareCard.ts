@@ -111,6 +111,32 @@ function clipped(ctx: CanvasRenderingContext2D, text: string, max: number): stri
   return `${value}…`;
 }
 
+/**
+ * `text` broken over at most `maxLines`, with the last one ellipsised if that
+ * still is not enough.
+ *
+ * Breaks on a space where the line has one and on any character where it does
+ * not, which is what both halves of this catalogue need: a name like
+ * "Ninomae Ina'nis" has words to break between and アキ・ローゼンタール has
+ * none. The caller sets the font first, as it does for `clipped`.
+ */
+function wrapped(ctx: CanvasRenderingContext2D, text: string,
+                 max: number, maxLines: number): string[] {
+  const lines: string[] = [];
+  let rest = text.trim();
+  while (rest) {
+    if (ctx.measureText(rest).width <= max) { lines.push(rest); break; }
+    if (lines.length === maxLines - 1) { lines.push(clipped(ctx, rest, max)); break; }
+    let cut = rest.length;
+    while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > max) cut--;
+    const space = rest.lastIndexOf(' ', cut);
+    if (space > 0) cut = space;
+    lines.push(rest.slice(0, cut).trimEnd());
+    rest = rest.slice(cut).trimStart();
+  }
+  return lines;
+}
+
 function write(ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
                { size, weight = 400, colour = INK, max }: {
                  size: number; weight?: number; colour?: string; max?: number;
@@ -152,16 +178,76 @@ const TILE_GAP = 14;
 const TILE_W = (SPAN - TILE_GAP * 4) / 5;
 const TILE_Y = 148;
 const TILE_H = 250;
-/**
- * A tile is always the same height, so the artwork takes whatever the writing
- * underneath does not want: taller where a team card has three lines to say,
- * shorter where a song card also carries that member's coverage.
- */
-const ART_TALL = 158;
-const ART_SHORT = 124;
+const TILE_TEXT_W = TILE_W - 24;
 
-function drawTile(ctx: CanvasRenderingContext2D, member: ShareCardMember,
-                  image: HTMLImageElement | null, x: number, artH: number): void {
+/* The writing under the artwork, and what each line of it costs. */
+const NAME_SIZE = 18;
+const NAME_LH = 21;
+const TITLE_SIZES = [13, 12, 11];
+const TOP_GAP = 10;      // artwork to the first line of the name
+const NAME_GAP = 3;
+const TITLE_GAP = 7;
+const META_LH = 17;
+const NOTE_LH = 17;
+const BOTTOM_PAD = 8;
+/**
+ * Below this the portrait stops being a portrait, so the costume gives up a
+ * point of size first. A threshold for that choice, never a clamp: the artwork
+ * is whatever the writing leaves, and forcing it taller would push the writing
+ * out through the bottom of the tile. The worst case the data allows -- two
+ * lines of name, two of costume, two of coverage, at the smallest costume
+ * size -- lands at 99, which is why the ladder ends where it does.
+ */
+const MIN_ART = 100;
+
+interface TileText {
+  name: string[];
+  title: string[];
+  titleSize: number;
+}
+
+/**
+ * How the writing on one tile breaks, at a given size for the costume.
+ *
+ * Two lines each for the member and the costume: these are real names, and
+ * cutting アキ・ローゼンタール to アキ・ローゼンタ… to save a line is not a
+ * saving worth making.
+ */
+function measureTile(ctx: CanvasRenderingContext2D, member: ShareCardMember,
+                     titleSize: number): TileText {
+  ctx.font = font(NAME_SIZE, 700);
+  const name = wrapped(ctx, member.name, TILE_TEXT_W, 2);
+  ctx.font = font(titleSize);
+  const title = wrapped(ctx, member.title || '—', TILE_TEXT_W, 2);
+  return { name, title, titleSize };
+}
+
+interface TileLayout {
+  artH: number;
+  /** Where the attribute row starts, the same on all five. */
+  metaY: number;
+}
+
+/**
+ * Where the writing sits, decided for the row rather than per tile.
+ *
+ * The name and the costume each get as many lines as the longest of the five
+ * needs, so the attribute row and the coverage under it start at one height
+ * across the row. A tile with less to say simply has more ground under its
+ * costume; a tile whose neighbours all wrapped does not sit a line high.
+ */
+function tileLayout(rows: TileText[], noteLines: number): TileLayout {
+  const names = Math.max(...rows.map((row) => row.name.length));
+  const titles = Math.max(...rows.map((row) => row.title.length));
+  const above = TOP_GAP + names * NAME_LH + NAME_GAP + titles * (rows[0].titleSize + 4)
+    + TITLE_GAP;
+  const artH = TILE_H - (above + META_LH + noteLines * NOTE_LH + BOTTOM_PAD);
+  return { artH, metaY: TILE_Y + artH + above };
+}
+
+function drawTile(ctx: CanvasRenderingContext2D, member: ShareCardMember, text: TileText,
+                  image: HTMLImageElement | null, x: number, layout: TileLayout): void {
+  const { artH, metaY } = layout;
   const accent = ATTRIBUTE_INK[member.type.toLowerCase()] ?? INK_3;
   const label = member.type ? member.type[0].toUpperCase() + member.type.slice(1) : '—';
 
@@ -212,19 +298,25 @@ function drawTile(ctx: CanvasRenderingContext2D, member: ShareCardMember,
     ctx.textAlign = 'left';
   }
 
-  const inner = TILE_W - 24;
-  write(ctx, member.name, x + 12, TILE_Y + artH + 12, { size: 18, weight: 700, max: inner });
-  write(ctx, member.title || '—', x + 12, TILE_Y + artH + 36,
-        { size: 13, colour: INK_3, max: inner });
+  const inner = TILE_TEXT_W;
+  let y = TILE_Y + artH + TOP_GAP;
+  for (const line of text.name) {
+    write(ctx, line, x + 12, y, { size: NAME_SIZE, weight: 700 });
+    y += NAME_LH;
+  }
+  y += NAME_GAP;
+  for (const line of text.title) {
+    write(ctx, line, x + 12, y, { size: text.titleSize, colour: INK_3 });
+    y += text.titleSize + 4;
+  }
 
   // Attribute and Bloom on one line, the attribute in its own colour.
-  const metaY = TILE_Y + artH + 58;
   write(ctx, label, x + 12, metaY, { size: 13, weight: 700, colour: accent });
   ctx.font = font(13, 700);
   const after = x + 12 + ctx.measureText(label).width;
   write(ctx, ` · 命座 ${member.bloom}`, after, metaY, { size: 13, colour: INK_2 });
 
-  let noteY = metaY + 20;
+  let noteY = metaY + META_LH;
   for (const note of (member.notes ?? []).slice(0, 2)) {
     write(ctx, note, x + 12, noteY, { size: 12.5, colour: INK_3, max: inner });
     noteY += 17;
@@ -267,9 +359,26 @@ export async function renderShareCard(data: ShareCardData,
     write(ctx, data.subjectMeta, LEFT, 114, { size: 16, colour: INK_3, max: SPAN });
   }
 
-  const artH = data.members.some((member) => member.notes?.length) ? ART_SHORT : ART_TALL;
-  data.members.slice(0, 5).forEach((member, index) => {
-    drawTile(ctx, member, artwork[index], LEFT + index * (TILE_W + TILE_GAP), artH);
+  /*
+   * One line budget for all five tiles, not one each: the tiles are the same
+   * size and sit in a row, so a name that needs two lines moves every artwork
+   * up, and they stay level. The costume gives up a point of size before the
+   * portrait is allowed to shrink past being recognisable.
+   */
+  const shown = data.members.slice(0, 5);
+  const noteLines = Math.max(0, ...shown.map((member) =>
+    Math.min(member.notes?.length ?? 0, 2)));
+  let text = shown.map((member) => measureTile(ctx, member, TITLE_SIZES[0]));
+  let layout = tileLayout(text, noteLines);
+  for (const size of TITLE_SIZES.slice(1)) {
+    if (layout.artH >= MIN_ART) break;
+    text = shown.map((member) => measureTile(ctx, member, size));
+    layout = tileLayout(text, noteLines);
+  }
+
+  shown.forEach((member, index) => {
+    drawTile(ctx, member, text[index], artwork[index],
+             LEFT + index * (TILE_W + TILE_GAP), layout);
   });
 
   let y = TILE_Y + TILE_H + 10;

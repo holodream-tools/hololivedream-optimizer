@@ -183,11 +183,16 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
     isLeader: card.id === leaderCardId,
   });
 
+  /**
+   * Said only when the picture does not already say it: where the Outfit's card
+   * is one of the five, the 隊長 mark on that tile is the whole story.
+   */
   const leaderLine = (leader: { id: string; name: string; talent?: string },
                       members: CardJson[]) => {
     const cardId = leader.id.replace(/^outfit:/, '');
     const alsoPlays = members.some((card) => card.id === cardId);
-    return `隊長服裝：${leaderName(leader as never)}（${alsoPlays ? '服裝＋上場' : '僅提供服裝'}）`;
+    return `隊長服裝：${leaderName(leader as never)}`
+      + (alsoPlays ? '' : '（本人沒有上場，只借用服裝效果）');
   };
 
   /** The picked team on this chart, exactly as the panel above reports it. */

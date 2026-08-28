@@ -156,13 +156,15 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
    */
   const cardData = (): ShareCardData | null => {
     if (!evaluation || evaluation.duplicate) return null;
+    // Said only when the picture does not already say it: where the Outfit's
+    // card is one of the five, the 隊長 mark on that tile is the whole story.
     const alsoPlays = evaluation.members.some((card) => card.id === pickedLeaderCard);
     return {
       subject: '自選隊伍',
       headline: { label: '綜合推薦指數', value: Math.round(evaluation.index).toLocaleString() },
       stats: evaluation.figures.filter((row) => row.onCard),
       leaderLine: `隊長服裝：${leaderName(evaluation.leader)}`
-        + `（${alsoPlays ? '服裝＋上場' : '僅提供服裝'}）`,
+        + (alsoPlays ? '' : '（本人沒有上場，只借用服裝效果）'),
       members: evaluation.members.map((card) => ({
         cardId: card.id,
         name: memberName(card),
