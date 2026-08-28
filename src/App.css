@@ -301,8 +301,19 @@ button:disabled { opacity: .45; cursor: default; }
 .slot { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px;
         overflow: hidden; background: var(--surface); padding: 0; display: flex; flex-direction: column;
         text-align: left; }
-.slot.is-empty { border: 1px dashed var(--line); display: grid; place-items: center;
-                 min-height: 132px; color: var(--ink-3); font-size: 20px; font-weight: 700; }
+/* An empty slot has to be exactly as tall as a filled one, or picking the
+   first card grows this row and shoves the whole card pool down -- the pool
+   the player is still clicking in. min-height: 132px was a guess that could
+   never hold: a filled slot is a 16/9 image whose height follows the column
+   width, plus the two lines of text under it, so the two matched at no width
+   at all. The ::before reproduces the image box and the padding reproduces the
+   text, so they now track each other at every width. */
+.slot.is-empty { border: 1px dashed var(--line); border-left: 3px dashed var(--line);
+                 display: grid; place-items: center;
+                 padding-bottom: 52px; color: var(--ink-3); font-size: 20px;
+                 font-weight: 700; }
+.slot.is-empty::before { content: ''; grid-area: 1 / 1; width: 100%; aspect-ratio: 16 / 9; }
+.slot.is-empty > span { grid-area: 1 / 1; }
 .slot img { width: 100%; height: auto; display: block; aspect-ratio: 16 / 9; object-fit: cover; }
 .slot-noart { display: grid; place-items: center; aspect-ratio: 16 / 9; background: var(--accent-soft);
               color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .1em;
