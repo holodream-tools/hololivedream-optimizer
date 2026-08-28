@@ -13,6 +13,8 @@ import { ManualTeamPage } from './pages/ManualTeamPage';
 import { OptimizerPage } from './pages/OptimizerPage';
 import { SongPage } from './pages/SongPage';
 import { FirstRunHint } from './ui/FirstRunHint';
+import { hasStored } from './lib/inventory';
+import { decodeTeam } from './lib/share';
 import './App.css';
 
 const TABS = [
@@ -26,9 +28,29 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id'];
 
+/**
+ * Where a visit starts.
+ *
+ * Nothing works until some cards are ticked, so a first-time visitor opens on
+ * 我的卡片 -- the first step of 我的卡片 → 隊伍最佳化 → 歌曲／順序, and the
+ * page the hint above the content points at first.
+ *
+ * Two visits keep 卡片庫, both because they are not first visits:
+ *   - anyone with a saved inventory, who has already done that step
+ *   - anyone arriving on a shared link, whose landing place is decided by the
+ *     restore that link triggers, not by this default
+ *
+ * Read straight from storage rather than from `owned`, so it is decided once,
+ * before the first paint, and cannot flip when the catalogue finishes loading.
+ */
+function openingTab(): TabId {
+  if (decodeTeam(window.location.hash)) return 'library';
+  return hasStored() ? 'library' : 'inventory';
+}
+
 export default function App() {
   const state = useAppState();
-  const [tab, setTab] = useState<TabId>('library');
+  const [tab, setTab] = useState<TabId>(openingTab);
   const [songTeam, setSongTeam] = useState<number | null>(null);
 
   const openSong = (index: number) => { setSongTeam(index); setTab('song'); };
@@ -64,6 +86,9 @@ export default function App() {
       </nav>
 
       <main className="page">
+        <p className="tagline">
+          hololive Dreams 非官方隊伍最佳化工具，可依持有卡、命座與歌曲譜面推薦隊伍、最佳站位並比較隊伍差異。
+        </p>
         <FirstRunHint state={state} />
         {state.error && <p className="error">{state.error}</p>}
         {state.newCards.length > 0 && (

@@ -439,6 +439,12 @@ button:disabled { opacity: .45; cursor: default; }
          border: 1px solid var(--pure-line); border-radius: 8px; padding: 9px 13px;
          margin: 0 0 16px; }
 
+/* One fixed line saying what this is, for someone who arrived from a link and
+   has no idea. Deliberately the quietest text on the page -- it is a caption,
+   not a banner, and it wraps like any other paragraph on a phone. */
+.tagline { margin: 0 0 14px; font-size: 12.5px; line-height: 1.7; color: var(--ink-3);
+           overflow-wrap: anywhere; }
+
 /* ---- first-run hint ----
    Quieter than .fresh and .error on purpose: it is advice, not news, and it
    sits above every page. Neutral surface, no accent colour, and the text is

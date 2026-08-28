@@ -45,6 +45,21 @@ export function save(inventory: Inventory): void {
   }
 }
 
+/**
+ * Whether this device has an inventory saved at all.
+ *
+ * Not "does it contain anything" -- a player who deliberately unticked every
+ * card still has a saved inventory, and is not a first-time visitor.
+ */
+export function hasStored(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY) !== null;
+  } catch {
+    // Blocked site data reads as a fresh visit, which is the safe answer.
+    return false;
+  }
+}
+
 /** Forget the stored inventory. `load` then returns blank rows for every card. */
 export function clearStored(): void {
   try {
