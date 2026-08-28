@@ -1,0 +1,89 @@
+name: Watch chart sources
+
+# Reports. Does not update anything.
+#
+# The chart timelines come from Holodori Optimizer, whose licence position is
+# unresolved: its LICENSE reads "All rights reserved" for its source code while
+# separately disclaiming the third-party "data, chart content" we actually
+# read. Until that has an answer, this repository watches instead of syncing.
+#
+# Three separate things stop this job from touching the site, so that turning
+# it into a sync is a decision rather than an oversight:
+#   1. `permissions: contents: read` -- the token cannot push
+#   2. tools/watch_chart_sources.py has no --apply and opens nothing for writing
+#   3. no step commits, and none is commented out waiting to be uncommented
+#
+# The score divisors are a different source with no such question, and those
+# ARE synced -- see sync-score-ratios.yml.
+
+on:
+  schedule:
+    # Monthly, on the 1st. Upstream's data version moves on the order of weeks,
+    # and this job downloads ~35 MB across the Pages build and four release
+    # archives; there is nothing to gain from asking more often.
+    - cron: '0 4 1 * *'
+  workflow_dispatch:
+    inputs:
+      releases:
+        description: 'How many recent releases to compare'
+        type: string
+        default: '4'
+
+concurrency:
+  group: watch-chart-sources
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compare public sources against the deployed bundle
+        id: watch
+        run: |
+          python3 tools/watch_chart_sources.py \
+            --releases "${{ inputs.releases || 4 }}" \
+            --json chart-sources.json | tee watch.log
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json
+          report = json.load(open('chart-sources.json'))
+          newer = report.get('newer') or []
+          print(f"newer={'true' if newer else 'false'}")
+          print(f"names={','.join(newer)}")
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chart-sources-report
+          path: |
+            chart-sources.json
+            watch.log
+          retention-days: 90
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### Chart source watch'
+            echo
+            if [ "${{ steps.watch.outputs.newer }}" = 'true' ]; then
+              echo "**A public source carries charts the site does not:** \`${{ steps.watch.outputs.names }}\`"
+              echo
+              echo 'Nothing was changed. Applying it is a manual decision, and the'
+              echo 'upstream licence question is still open.'
+            else
+              echo 'No action needed: nothing public is more complete than what the site serves.'
+            fi
+            echo
+            echo '```'
+            cat watch.log 2>/dev/null || echo '(the watch step failed before writing a log)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
