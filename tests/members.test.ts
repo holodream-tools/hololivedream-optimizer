@@ -5,13 +5,86 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
-  GENERATION_ORDER, compareCards, compareGenerations, leaderName, memberName, searchIndex,
-  sortedGenerations,
+  GENERATION_ORDER, compareCards, compareGenerations, indexMembers, leaderName, memberName,
+  searchIndex, sortedGenerations,
 } from '../src/ui/members';
 import type { CardBundle, CardJson } from '../src/engine/types';
 
 const bundle: CardBundle = JSON.parse(
   readFileSync(new URL('../public/data/cards.json', import.meta.url), 'utf8'));
+
+/** The game's own card numbers, as upstream serves them. */
+const NUMBERS: Record<string, number> = {
+  "airani_iofifteen_5": 3003,
+  "akai_haato_5": 5,
+  "aki_rosenthal_5": 4,
+  "anya_melfissa_5": 3005,
+  "ayunda_risu_5": 3001,
+  "azki_5": 13,
+  "fuwawa_abyssgard_5": 4016,
+  "hakos_baelz_5": 4012,
+  "hakui_koyori_5": 37,
+  "himemori_luna_5": 28,
+  "himemori_luna_swim_5": 28,
+  "hoshimachi_suisei_5": 18,
+  "hoshimachi_suisei_swim_5": 18,
+  "houshou_marine_5": 23,
+  "ichijou_ririka_5": 6003,
+  "inugami_korone_5": 17,
+  "irys_5": 4007,
+  "juufuutei_raden_5": 6004,
+  "kaela_kovalskia_5": 3008,
+  "kazama_iroha_5": 39,
+  "kobo_kanaeru_5": 3009,
+  "koseki_bijou_5": 4014,
+  "kureiji_ollie_5": 3004,
+  "kureiji_ollie_swim_5": 3004,
+  "la_darknesss_5": 35,
+  "mococo_abyssgard_5": 4017,
+  "momosuzu_nene_5": 31,
+  "moona_hoshinova_5": 3002,
+  "mori_calliope_5": 4001,
+  "mori_calliope_swim_5": 4001,
+  "nakiri_ayame_5": 10,
+  "nakiri_ayame_swim_5": 10,
+  "natsuiro_matsuri_5": 7,
+  "nekomata_okayu_5": 16,
+  "nerissa_ravencroft_5": 4015,
+  "ninomae_ina_nis_5": 4003,
+  "ninomae_ina_nis_swim_5": 4003,
+  "omaru_polka_5": 34,
+  "ookami_mio_5": 14,
+  "oozora_subaru_5": 12,
+  "oozora_subaru_swim_5": 12,
+  "otonose_kanade_5": 6002,
+  "otonose_kanade_swim_5": 6002,
+  "ouro_kronii_5": 4010,
+  "pavolia_reine_5": 3006,
+  "robocosan_5": 2,
+  "sakura_miko_5": 15,
+  "sakura_miko_swim_5": 15,
+  "shiori_novella_5": 4013,
+  "shirakami_fubuki_5": 6,
+  "shiranui_flare_5": 21,
+  "shiranui_flare_swim_5": 21,
+  "shirogane_noel_5": 22,
+  "shirogane_noel_swim_5": 22,
+  "shishiro_botan_5": 32,
+  "takanashi_kiara_5": 4002,
+  "takane_lui_5": 36,
+  "todoroki_hajime_5": 6005,
+  "tokino_sora_5": 1,
+  "tokoyami_towa_5": 27,
+  "tsunomaki_watame_5": 26,
+  "tsunomaki_watame_swim_5": 26,
+  "usada_pekora_5": 19,
+  "vestia_zeta_5": 3007,
+  "yukihana_lamy_5": 30,
+  "yuzuki_choco_5": 11
+};
+
+// The names come from the catalogue, so the catalogue has to be indexed first.
+indexMembers(bundle);
 
 const cardById = (id: string) => bundle.cards.find((card) => card.id === id)!;
 const ID_EN = new Set(['ID1期生', 'ID2期生', 'ID3期生', 'Myth', 'Promise', 'Advent']);
@@ -96,16 +169,29 @@ describe('search', () => {
 });
 
 describe('branch order', () => {
-  it('lists JP by debut, then ID, then EN', () => {
-    const shown = sortedGenerations(bundle.cards);
-    expect(shown[0]).toBe('0期生');
-    expect(shown.indexOf('2期生')).toBeLessThan(shown.indexOf('3期生'));
-    expect(shown.indexOf('ゲーマーズ')).toBeLessThan(shown.indexOf('3期生'));
-    expect(shown.indexOf('holoX')).toBeLessThan(shown.indexOf('ReGLOSS'));
-    expect(shown.indexOf('ReGLOSS')).toBeLessThan(shown.indexOf('ID1期生'));
-    expect(shown.indexOf('ID3期生')).toBeLessThan(shown.indexOf('Myth'));
-    expect(shown.indexOf('Myth')).toBeLessThan(shown.indexOf('Promise'));
-    expect(shown.indexOf('Promise')).toBeLessThan(shown.indexOf('Advent'));
+  it('derives the same order from card numbers as the written fallback', () => {
+    // The snapshot carries no numbers, so first paint uses the written list and
+    // the upstream refresh uses the data. If they disagreed the list would
+    // visibly reshuffle a moment after load.
+    const numbered: CardBundle = {
+      ...bundle,
+      cards: bundle.cards.map((card, index) => ({ ...card, cardNumber: NUMBERS[card.id] ?? index })),
+    };
+    indexMembers(numbered);
+    const fromData = sortedGenerations(numbered.cards);
+    indexMembers(bundle);
+    expect(fromData).toEqual(GENERATION_ORDER.filter((name) => fromData.includes(name)));
+  });
+
+  it('lists the branches the way the game numbers them', () => {
+    // Two of these were guessed wrong by hand before the card numbers were
+    // found: ゲーマーズ formed before 2期生, and ReGLOSS is filed after EN.
+    expect(sortedGenerations(bundle.cards)).toEqual([
+      '0期生', '1期生', 'ゲーマーズ', '2期生', '3期生', '4期生', '5期生', 'holoX',
+      'ID1期生', 'ID2期生', 'ID3期生',
+      'Myth', 'Promise', 'Advent',
+      'ReGLOSS',
+    ]);
   });
 
   it('does not depend on the order the bundle happens to use', () => {

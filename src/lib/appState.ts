@@ -12,6 +12,7 @@ import {
 } from './inventory';
 import { DEFAULT_PREFS, clearPrefs, loadPrefs, savePrefs, type Prefs } from './prefs';
 import { decodeTeam, stripHash, type SharedTeam } from './share';
+import { indexMembers } from '../ui/members';
 import type { CardBundle, CardJson, LeaderJson } from '../engine/types';
 import type { ChartMeta } from '../engine/chartScore';
 import type { TeamBreakdown } from '../ui/TeamRow';
@@ -136,12 +137,14 @@ export function useAppState(): AppState {
       .then((response) => response.json())
       .then(async (bundled: CardBundle) => {
         if (cancelled) return;
+        indexMembers(bundled);
         setBundle(bundled);
         setInventory(load(bundled));
         setImages(await ImageSource.load(base));
 
         const fresh = await fetchUpstream(bundled, controller.signal);
         if (cancelled || !fresh) return;
+        indexMembers(fresh.bundle);
         setBundle(fresh.bundle);
         setOrigin('upstream');
         setNewCards(fresh.added);

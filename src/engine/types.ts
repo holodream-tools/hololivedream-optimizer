@@ -16,6 +16,13 @@ export interface CardJson {
   type: string; generation: string;
   maxBloom: number;
   blooms: Record<string, BloomJson>;
+  /**
+   * The game's own card number, from upstream's `holodori_id`. Its blocks carry
+   * the roster order -- 0xxx and 6xxx are JP, 3xxx ID, 4xxx EN -- which is the
+   * only ordering signal in the data. Absent from the build-time snapshot,
+   * whose source does not keep the field, so every reader needs a fallback.
+   */
+  cardNumber?: number;
 }
 
 export interface LeaderJson {

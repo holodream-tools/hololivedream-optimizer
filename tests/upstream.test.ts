@@ -24,8 +24,25 @@ describe('upstream reshape parity with the build-time export', () => {
   it('reproduces every card field the engine reads', () => {
     for (const [index, card] of rebuilt.cards.entries()) {
       const reference = bundled.cards[index];
-      expect(card, card.id).toEqual(reference);
+      // Everything the engine reads must match. cardNumber is the one field
+      // the build-time export cannot carry -- its source, the Python project's
+      // database, does not keep holodori_id -- so it is compared separately
+      // below rather than silently dropped from the comparison.
+      const { cardNumber, ...engineFields } = card;
+      void cardNumber;
+      expect(engineFields, card.id).toEqual(reference);
     }
+  });
+
+  it('adds the card number, and only that, on the upstream path', () => {
+    for (const card of rebuilt.cards) {
+      expect(card.cardNumber, card.id).toBeGreaterThan(0);
+    }
+    // Nothing the snapshot carries is missing from the reshape, and nothing new
+    // appears beyond this one field.
+    const extra = new Set(Object.keys(rebuilt.cards[0]));
+    for (const key of Object.keys(bundled.cards[0])) extra.delete(key);
+    expect([...extra]).toEqual(['cardNumber']);
   });
 
   it('reproduces every outfit payload', () => {

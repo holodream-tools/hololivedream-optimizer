@@ -29,6 +29,7 @@ interface UpstreamPotential {
 
 interface UpstreamCard {
   id?: string;
+  holodori_id?: string;
   character?: string;
   card_name?: string;
   rarity?: number | string;
@@ -44,6 +45,12 @@ interface UpstreamPayload { generated?: string; cards?: UpstreamCard[] }
  * because the UI shows it verbatim. The engine casefolds either way, so this
  * only keeps the two paths producing identical bundles.
  */
+/** `card-00019-5-uniq-0000-00` -> 19. Undefined when the field is absent. */
+function cardNumberOf(holodoriId: string | undefined): number | undefined {
+  const match = /card-(\d+)/.exec(holodoriId ?? '');
+  return match ? Number(match[1]) : undefined;
+}
+
 function titleCase(value: string): string {
   return value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '';
 }
@@ -84,6 +91,7 @@ export function normalizeUpstream(payload: UpstreamPayload): CardBundle {
       generation: item.group ?? '',
       maxBloom,
       blooms,
+      cardNumber: cardNumberOf(item.holodori_id),
     });
     leaders.push({
       id: `outfit:${item.id}`,
