@@ -123,7 +123,7 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
                         height={13} rx={2} fill={color}
                         opacity={0.2 + 0.55 * window.probability}>
                     <title>
-                      {`Active ${window.start.toFixed(1)}–${window.end.toFixed(1)}s`
+                      {`主動技能 ${window.start.toFixed(1)}–${window.end.toFixed(1)}s`
                         + ` · 發動機率 ${(window.probability * 100).toFixed(0)}%`
                         + ` · +${window.scoreUp.toFixed(0)}%`}
                     </title>
@@ -132,9 +132,9 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
                 <rect x={x(clamp(special.start))} y={top + 4} width={specialWidth} height={9}
                       rx={2} fill={color} className="tl-special">
                   <title>
-                    {`Special ${special.start.toFixed(1)}–${special.end.toFixed(1)}s`
-                      + ` · Score Support +${row.specialSupport.toFixed(0)}`
-                      + (row.specialRate ? ` · SAR +${row.specialRate.toFixed(0)}` : '')}
+                    {`特殊技能 ${special.start.toFixed(1)}–${special.end.toFixed(1)}s`
+                      + ` · 分數支援 +${row.specialSupport.toFixed(0)}`
+                      + (row.specialRate ? ` · 技能發動率加成 +${row.specialRate.toFixed(0)}` : '')}
                   </title>
                 </rect>
               </g>
@@ -144,7 +144,7 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
       </div>
 
       <p className="timeline-legend">
-        上排短條＝Special 持續時間，下排長條＝Active 可發動時間（越實心表示發動機率越高）。
+        上排短條＝特殊技能持續時間，下排長條＝主動技能可發動時間（越實心表示發動機率越高）。
         兩條在同一時間重疊，代表那段時間的加成互相疊在同一批音符上。
       </p>
 
@@ -159,7 +159,7 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
           <thead>
             <tr>
               <th scope="col">站位</th><th scope="col">成員</th>
-              <th scope="col">Special</th><th scope="col">Active</th>
+              <th scope="col">特殊技能</th><th scope="col">主動技能</th>
               <th scope="col">時間覆蓋</th><th scope="col">音符覆蓋</th>
               <th scope="col" className="tl-th-score">分數覆蓋</th>
             </tr>

@@ -9,7 +9,7 @@ import { branchLabel } from './members';
 
 const STAT_LABEL: Record<string, string> = {
   all: '全能力', performance: '表現力', technique: '技巧', sense: '品味',
-  score_support: 'Score Support',
+  score_support: '分數支援',
 };
 const ATTRIBUTE_LABEL: Record<string, string> = { cute: 'Cute', happy: 'Happy', pure: 'Pure' };
 
@@ -48,7 +48,7 @@ export function passiveText(skill: SkillJson | null | undefined): string | null 
     return `${prefix}${target}的全能力 +${value}%`;
   }
   if (effect.endsWith('score_support') || effect.endsWith('score_support_conditional')) {
-    return `${prefix}${target}的 Score Support +${value}`;
+    return `${prefix}${target}的分數支援 +${value}`;
   }
   const stat = STAT_LABEL[String(skill.stat ?? '')] ?? String(skill.stat ?? '能力');
   return `${prefix}${target}的 ${stat} +${value}%`;
@@ -82,8 +82,8 @@ export function specialText(skill: SkillJson | null | undefined): string | null 
   const support = Number(skill.score_support ?? 0);
   const rate = Number(skill.skill_rate_up ?? 0);
   const parts = [`持續 ${duration} 秒`];
-  if (support) parts.push(`Score Support +${support}`);
-  if (rate) parts.push(`Active 發動率 +${rate}%`);
+  if (support) parts.push(`分數支援 +${support}`);
+  if (rate) parts.push(`主動技能發動率 +${rate}%`);
   return parts.join('、');
 }
 

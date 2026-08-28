@@ -56,7 +56,7 @@ export function CardTile(props: CardTileProps) {
   const leaderToggle = (
     <label className={`tile-leader${leaderUnlocked ? ' is-on' : ''}`}>
       <input type="checkbox" checked={leaderUnlocked} onChange={props.onToggleLeader} disabled={!owned} />
-      <span>Leader</span>
+      <span>隊長服裝</span>
     </label>
   );
 

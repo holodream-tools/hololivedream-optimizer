@@ -263,24 +263,24 @@ export function ComparePage({ state }: { state: AppState }) {
             </thead>
             <tbody>
               <DiffRow label="基礎能力" a={a.generic.basePower} b={b.generic.basePower} format={int} />
-              <DiffRow label="Passive 能力加成" a={a.generic.passiveGain} b={b.generic.passiveGain} format={int} />
-              <DiffRow label="Outfit 能力加成" a={a.generic.outfitGain} b={b.generic.outfitGain} format={int} />
+              <DiffRow label="被動技能能力加成" a={a.generic.passiveGain} b={b.generic.passiveGain} format={int} />
+              <DiffRow label="隊長服裝能力加成" a={a.generic.outfitGain} b={b.generic.outfitGain} format={int} />
               <DiffRow label="最終總合力" a={a.generic.totalPower} b={b.generic.totalPower} format={int} />
-              <DiffRow label="Passive Score Support" a={a.generic.passiveSupport} b={b.generic.passiveSupport} format={one} />
-              <DiffRow label="Special Score Support" a={a.generic.specialSupport} b={b.generic.specialSupport} format={one}
+              <DiffRow label="被動技能分數支援" a={a.generic.passiveSupport} b={b.generic.passiveSupport} format={one} />
+              <DiffRow label="特殊技能分數支援" a={a.generic.specialSupport} b={b.generic.specialSupport} format={one}
                        hint="以 192 秒的參考長度取平均" />
-              <DiffRow label="Outfit Score Support" a={a.generic.leaderSupport} b={b.generic.leaderSupport} format={one} />
-              <DiffRow label="SAR（技能發動率）" a={a.generic.sarPoints} b={b.generic.sarPoints} format={one}
+              <DiffRow label="隊長服裝分數支援" a={a.generic.leaderSupport} b={b.generic.leaderSupport} format={one} />
+              <DiffRow label="技能發動率加成（SAR）" a={a.generic.sarPoints} b={b.generic.sarPoints} format={one}
                        hint="每個 Rate Up 依自己的持續時間，對 192 秒取平均" />
-              <DiffRow label="Active 平均效果" a={a.generic.activeScoreUp} b={b.generic.activeScoreUp} format={one} />
-              <DiffRow label="Active 時間覆蓋" a={a.generic.activeTimeCoverage} b={b.generic.activeTimeCoverage}
-                       format={share} hint="至少一個 Active 生效的時間比例" />
+              <DiffRow label="主動技能平均效果" a={a.generic.activeScoreUp} b={b.generic.activeScoreUp} format={one} />
+              <DiffRow label="主動技能時間覆蓋" a={a.generic.activeTimeCoverage} b={b.generic.activeTimeCoverage}
+                       format={share} hint="至少一個主動技能生效的時間比例" />
               <DiffRow label="綜合推薦指數" a={a.generic.index} b={b.generic.index} format={int} />
               {chart && a.chart && b.chart && (
                 <>
                   <DiffRow label="指定歌曲預估分" a={a.chart.score} b={b.chart.score} format={int}
                            hint="Perfect 全連假設，兩邊各自用自己的最佳站位" />
-                  <DiffRow label="Active 實際貢獻" a={a.chart.detail.activeBonus} b={b.chart.detail.activeBonus} format={one} />
+                  <DiffRow label="主動技能實際貢獻" a={a.chart.detail.activeBonus} b={b.chart.detail.activeBonus} format={one} />
                 </>
               )}
             </tbody>
@@ -293,7 +293,7 @@ export function ComparePage({ state }: { state: AppState }) {
               report={genericAttribution}
               note={'以下是「歸因貢獻」，不是遊戲給的數字。指數是相乘出來的，百分比本來不能直接相加，'
                 + '所以這裡用對數的方式拆開，拆出來的各項加起來剛好等於上面的總差距。'
-                + 'Score Support 本身不會加分，只會放大有發動的 Active，所以兩者相乘的那部分算在 Support 上。'}
+                + '分數支援本身不會加分，只會放大有發動的主動技能，所以兩者相乘的那部分算在分數支援上。'}
             />
           )}
 
@@ -325,7 +325,7 @@ export function ComparePage({ state }: { state: AppState }) {
               <AttributionPanel
                 title={`差異歸因 · ${chart.meta.title}`}
                 report={chartAttribution}
-                note={'歌曲模式是在每個音符當下套用 Active、Special、SAR 和 Score Support，'
+                note={'歌曲模式是在每個音符當下套用主動技能、特殊技能、技能發動率加成和分數支援，'
                   + '沒辦法像上面那樣拆開，所以合併成「本曲技能實際貢獻」一項。'
                   + '分數有取整，誤差已經算進上面能力的三項裡（影響通常不到 0.1 個百分點）。'
                   + '下面的覆蓋率只是幫你看這一項發生在哪裡，不算在歸因裡，也不要跟時間軸上的 ↑ 箭頭混在一起看'
@@ -347,11 +347,11 @@ export function ComparePage({ state }: { state: AppState }) {
                   </thead>
                   <tbody>
                     {([
-                      ['Active 時間覆蓋', 'activeTimeCoverage'],
-                      ['Active 音符覆蓋', 'activeNoteCoverage'],
-                      ['Active 分數覆蓋', 'activeScoreCoverage'],
-                      ['Special 音符覆蓋', 'specialNoteCoverage'],
-                      ['Special 分數覆蓋', 'specialScoreCoverage'],
+                      ['主動技能時間覆蓋', 'activeTimeCoverage'],
+                      ['主動技能音符覆蓋', 'activeNoteCoverage'],
+                      ['主動技能分數覆蓋', 'activeScoreCoverage'],
+                      ['特殊技能音符覆蓋', 'specialNoteCoverage'],
+                      ['特殊技能分數覆蓋', 'specialScoreCoverage'],
                     ] as const).map(([label, key]) => {
                       const total = (side: Side) => (side.chart?.detail.members ?? [])
                         .reduce((sum, member) => sum + member[key], 0);
@@ -396,21 +396,21 @@ export function ComparePage({ state }: { state: AppState }) {
                           {expanded && (
                             <dl className="cmp-direct">
                               <div><dt>三項能力合計</dt><dd>{int(direct.base)}</dd></div>
-                              <div><dt>Passive 受益</dt><dd>+{int(direct.passiveGain)}</dd></div>
-                              <div><dt>Outfit 受益</dt><dd>+{int(direct.outfitGain)}</dd></div>
-                              <div><dt>Passive Score Support</dt><dd>+{one(direct.passiveSupport)}</dd></div>
-                              <div><dt>Special 時間平均</dt><dd>+{one(direct.specialSupport)}</dd></div>
-                              <div><dt>SAR 貢獻</dt><dd>+{one(direct.sarPoints)}</dd></div>
-                              <div><dt>Active 效果</dt><dd>+{one(direct.activeScoreUp)}%</dd></div>
-                              <div><dt>Active 時間覆蓋</dt><dd>{share(direct.activeTimeCoverage)}</dd></div>
+                              <div><dt>被動技能受益</dt><dd>+{int(direct.passiveGain)}</dd></div>
+                              <div><dt>隊長服裝受益</dt><dd>+{int(direct.outfitGain)}</dd></div>
+                              <div><dt>被動技能分數支援</dt><dd>+{one(direct.passiveSupport)}</dd></div>
+                              <div><dt>特殊技能時間平均</dt><dd>+{one(direct.specialSupport)}</dd></div>
+                              <div><dt>技能發動率加成貢獻</dt><dd>+{one(direct.sarPoints)}</dd></div>
+                              <div><dt>主動技能效果</dt><dd>+{one(direct.activeScoreUp)}%</dd></div>
+                              <div><dt>主動技能時間覆蓋</dt><dd>{share(direct.activeTimeCoverage)}</dd></div>
                               {chartDetail && (
                                 <>
-                                  <div><dt>本曲 Special 時間</dt><dd>{share(chartDetail.specialTimeCoverage)}</dd></div>
-                                  <div><dt>本曲 Special 音符</dt><dd>{share(chartDetail.specialNoteCoverage)}</dd></div>
-                                  <div><dt>本曲 Special 分數</dt><dd>{share(chartDetail.specialScoreCoverage)}</dd></div>
-                                  <div><dt>本曲 Active 時間</dt><dd>{share(chartDetail.activeTimeCoverage)}</dd></div>
-                                  <div><dt>本曲 Active 音符</dt><dd>{share(chartDetail.activeNoteCoverage)}</dd></div>
-                                  <div><dt>本曲 Active 分數</dt><dd>{share(chartDetail.activeScoreCoverage)}</dd></div>
+                                  <div><dt>本曲特殊技能時間</dt><dd>{share(chartDetail.specialTimeCoverage)}</dd></div>
+                                  <div><dt>本曲特殊技能音符</dt><dd>{share(chartDetail.specialNoteCoverage)}</dd></div>
+                                  <div><dt>本曲特殊技能分數</dt><dd>{share(chartDetail.specialScoreCoverage)}</dd></div>
+                                  <div><dt>本曲主動技能時間</dt><dd>{share(chartDetail.activeTimeCoverage)}</dd></div>
+                                  <div><dt>本曲主動技能音符</dt><dd>{share(chartDetail.activeNoteCoverage)}</dd></div>
+                                  <div><dt>本曲主動技能分數</dt><dd>{share(chartDetail.activeScoreCoverage)}</dd></div>
                                 </>
                               )}
                             </dl>

@@ -78,7 +78,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
       <div className="page-head">
         <div>
           <h2>自選隊伍</h2>
-          <p className="page-sub">自己挑五張卡與 Leader Outfit，看<b>綜合推薦指數</b>如何組成。</p>
+          <p className="page-sub">自己挑五張卡與隊長服裝，看<b>綜合推薦指數</b>如何組成。</p>
         </div>
         <p className="page-count">{picked.length} / 5 已選</p>
       </div>
@@ -102,7 +102,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
         <div className="leader-pick">
           <span className="leader-chip-label">隊長服裝</span>
           <select value={leaderId} onChange={(event) => setLeaderId(event.target.value)}>
-            <option value="">選擇 Leader Outfit…</option>
+            <option value="">選擇隊長服裝…</option>
             {unlockedLeaders.map((leader) => (
               <option key={leader.id} value={leader.id}>{leaderName(leader)}</option>
             ))}
@@ -112,10 +112,10 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
               ? (outfitText(pickedLeaderPayload) ?? '這件服裝沒有可辨識的效果。')
               : '選一件服裝，這裡會顯示它的效果。'}
           </p>
-          <p className="leader-note">Leader 不佔 5 名 Member 名額。</p>
+          <p className="leader-note">隊長服裝不佔 5 名隊員名額。</p>
         </div>
         <div className="leader-art">
-          <span className="leader-chip">LEADER</span>
+          <span className="leader-chip">隊長服裝</span>
           {pickedLeaderArt
             ? <img src={pickedLeaderArt} alt="" width={192} height={108} />
             : <span className="leader-noart">未選擇</span>}
@@ -185,7 +185,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
       {evaluation && !evaluation.duplicate && (
         <section className="breakdown">
           <div className="breakdown-index">
-            <p className="breakdown-label" title="使用 Generic 192 秒模型快速比較大量隊伍。">
+            <p className="breakdown-label" title="使用通用 192 秒模型快速比較大量隊伍。">
               綜合推薦指數
             </p>
             <b>{Math.round(evaluation.index).toLocaleString()}</b>
@@ -193,15 +193,15 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
           </div>
           <dl className="breakdown-parts">
             <div><dt>基礎總合力</dt><dd>{evaluation.basePower.toLocaleString()}</dd></div>
-            <div><dt>Passive／Outfit 加成</dt><dd>+{evaluation.passiveGain.toLocaleString()}</dd></div>
+            <div><dt>被動／隊長服裝加成</dt><dd>+{evaluation.passiveGain.toLocaleString()}</dd></div>
             <div><dt>加成後總合力</dt><dd>{evaluation.totalPower.toLocaleString()}</dd></div>
-            <div><dt>Active 期望</dt><dd>+{evaluation.activeScoreUp.toFixed(1)}%</dd></div>
-            <div><dt>Passive Score Support</dt><dd>+{evaluation.staticSupport.toFixed(0)}</dd></div>
-            <div><dt>Outfit Score Support</dt><dd>+{evaluation.leaderSupport.toFixed(0)}</dd></div>
-            <div><dt>Special 時間平均</dt><dd>+{evaluation.specialSupport.toFixed(1)}</dd></div>
+            <div><dt>主動技能期望</dt><dd>+{evaluation.activeScoreUp.toFixed(1)}%</dd></div>
+            <div><dt>被動技能分數支援</dt><dd>+{evaluation.staticSupport.toFixed(0)}</dd></div>
+            <div><dt>隊長服裝分數支援</dt><dd>+{evaluation.leaderSupport.toFixed(0)}</dd></div>
+            <div><dt>特殊技能時間平均</dt><dd>+{evaluation.specialSupport.toFixed(1)}</dd></div>
           </dl>
           <p className="metric-note">
-            綜合推薦指數以 Generic 192 秒模型計算，不對應任何一首歌；指定歌曲理論預估分（Perfect 假設）請到「歌曲／順序」計算。
+            綜合推薦指數以通用 192 秒模型計算，不對應任何一首歌；指定歌曲理論預估分（Perfect 假設）請到「歌曲／順序」計算。
           </p>
         </section>
       )}

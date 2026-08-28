@@ -44,7 +44,7 @@ export default function App() {
         </div>
         <dl className="masthead-stats">
           <div><dt>持有卡</dt><dd>{state.owned.length}</dd></div>
-          <div><dt>Leader</dt><dd>{state.unlockedLeaders.length}</dd></div>
+          <div><dt>隊長服裝</dt><dd>{state.unlockedLeaders.length}</dd></div>
         </dl>
       </header>
 

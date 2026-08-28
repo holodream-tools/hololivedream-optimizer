@@ -119,7 +119,7 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
         <div>
           <h2>最佳化</h2>
           <p className="page-sub">
-            列舉所有五人組合 × 已解鎖 Leader Outfit，依<b>綜合推薦指數</b>排名。用於隊伍強弱比較的估算指標，非實際 Live 分數。
+            列舉所有五人組合 × 已解鎖隊長服裝，依<b>綜合推薦指數</b>排名。用於隊伍強弱比較的估算指標，非實際 Live 分數。
           </p>
         </div>
       </div>
@@ -128,7 +128,7 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
         <label className="toggle">
           <input type="checkbox" checked={diversity.oneLeaderPerTeam}
                  onChange={(event) => setPrefs({ oneLeaderPerTeam: event.target.checked })} />
-          <span>同一組隊伍只顯示最佳 Leader</span>
+          <span>同一組隊伍只顯示最佳隊長服裝</span>
         </label>
         <label className="toggle">
           <input type="checkbox" checked={diversity.minDistinctMembers > 0}
@@ -157,7 +157,7 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
       <div className="runbar">
         <dl className="scope">
           <div><dt>持有卡</dt><dd>{owned.length}</dd></div>
-          <div><dt>Leader Outfit</dt><dd>{unlockedLeaders.length}</dd></div>
+          <div><dt>隊長服裝</dt><dd>{unlockedLeaders.length}</dd></div>
           <div><dt>五人組合</dt><dd>{combos.toLocaleString()}</dd></div>
           <div><dt>待評估</dt><dd>{(combos * unlockedLeaders.length).toLocaleString()}</dd></div>
           {pinned.length > 0 && <div className="is-pinned"><dt>已指定</dt><dd>{pinned.length} 張</dd></div>}
@@ -166,7 +166,7 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
         <div className="runbar-action">
           {!progress && owned.length < 5 && <p className="hint">先到「我的卡片」勾選至少 5 張。</p>}
           {!progress && owned.length >= 5 && !unlockedLeaders.length && (
-            <p className="hint">至少要有一張持有卡開啟 Leader。</p>
+            <p className="hint">至少要有一張持有卡開啟隊長服裝。</p>
           )}
           {progress && (
             <div className="runbar-progress">
@@ -195,7 +195,7 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
           {/* The ranked list shows a bare number, so what that number is has to be
               said once, right above it -- not left to a tooltip nobody hovers. */}
           <p className="metric-note">
-            下方數字是<b>綜合推薦指數</b>：用於隊伍強弱比較的估算指標，非實際 Live 分數。它以 Generic 192 秒模型計算，方便一次比較大量隊伍；要看實際歌曲分數請按「指定歌曲 →」。
+            下方數字是<b>綜合推薦指數</b>：用於隊伍強弱比較的估算指標，非實際 Live 分數。它以通用 192 秒模型計算，方便一次比較大量隊伍；要看實際歌曲分數請按「指定歌曲 →」。
           </p>
           {run.pinned.length > 0 && (
             <p className="pinned-note">

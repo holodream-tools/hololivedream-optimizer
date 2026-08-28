@@ -61,7 +61,7 @@ export function InventoryPage({ state }: { state: AppState }) {
       <div className="page-head">
         <div>
           <h2>我的卡片</h2>
-          <p className="page-sub">勾選你實際擁有的卡，設定 Bloom，並開啟可用的 Leader Outfit。</p>
+          <p className="page-sub">勾選你實際擁有的卡，設定 Bloom，並開啟可用的隊長服裝。</p>
         </div>
         <p className="page-count">{visible.length} / {bundle.cards.length} 張</p>
       </div>
@@ -108,7 +108,7 @@ export function InventoryPage({ state }: { state: AppState }) {
         <button onClick={() => state.bulk(visible, { owned: 1 }, true)}>全設為持有</button>
         <button onClick={() => state.bulk(visible, { owned: 0, leader_unlocked: 0 })}>全部取消</button>
         <button disabled={!ownedVisible.length}
-                onClick={() => state.bulk(ownedVisible, { leader_unlocked: 1 })}>持有者開啟 Leader</button>
+                onClick={() => state.bulk(ownedVisible, { leader_unlocked: 1 })}>持有者開啟隊長服裝</button>
         <button disabled={!ownedVisible.length}
                 onClick={() => state.bulk(ownedVisible, {}, true)}>持有者全設滿命座</button>
         <button disabled={!ownedVisible.length}

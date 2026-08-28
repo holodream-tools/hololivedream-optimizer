@@ -143,8 +143,8 @@ describe('song attribution', () => {
         / (Math.log(a.view.totalPower) - Math.log(b.view.totalPower));
       const raw = new Map([
         ['基礎能力', (a.view.basePower - b.view.basePower) / powerMean],
-        ['Passive 能力加成', (a.view.passiveGain - b.view.passiveGain) / powerMean],
-        ['Leader（Outfit）能力加成', (a.view.outfitGain - b.view.outfitGain) / powerMean],
+        ['被動技能能力加成', (a.view.passiveGain - b.view.passiveGain) / powerMean],
+        ['隊長服裝能力加成', (a.view.outfitGain - b.view.outfitGain) / powerMean],
       ]);
       const scale = report.gap / report.logGap;
       let moved = 0;
@@ -185,6 +185,6 @@ describe('song attribution', () => {
     expect(generic.aTotal).toBe(a.view.index);
     expect(song.rows.map((row) => row.label))
       .toContain('本曲技能實際貢獻');
-    expect(generic.rows.map((row) => row.label)).toContain('SAR（技能發動率）');
+    expect(generic.rows.map((row) => row.label)).toContain('技能發動率加成（SAR）');
   });
 });

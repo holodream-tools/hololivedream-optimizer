@@ -328,7 +328,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                     <>
                       <div className="song-score">
                         <p className="breakdown-label"
-                           title="依實際歌曲譜面、Combo、Special、Active、SAR 等時間點計算。">
+                           title="依實際歌曲譜面、Combo、特殊技能、主動技能、技能發動率加成（SAR）等時間點計算。">
                           這首歌的最佳隊伍 · 預估分（Perfect 假設）
                         </p>
                         <b>{ranked[0].songScore.toLocaleString()}</b>
@@ -354,7 +354,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                           const style = attributeStyle(card.type);
                           return (
                             <li key={slot} style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}>
-                              <span className="order-slot">Special {slot + 1}</span>
+                              <span className="order-slot">特殊技能 {slot + 1}</span>
                               {images?.url(card.id)
                                 ? <img src={images.url(card.id)} alt="" width={192} height={108} />
                                 : <span className="slot-noart">{style.label}</span>}
@@ -371,7 +371,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                         <thead>
                           <tr>
                             <th scope="col">歌曲</th><th scope="col">預估分</th>
-                            <th scope="col">通用排名</th><th scope="col">最佳 Skill Order</th>
+                            <th scope="col">通用排名</th><th scope="col">最佳技能順序</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -394,7 +394,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                       {ranked[timelineTeam] && chartPrepared && (
                         <section className="timeline-block">
                           <h4>
-                            Timeline 分析
+                            時間軸分析
                             <span>
                               第 {ranked[timelineTeam].songRank} 名 ·
                               {' '}{ranked[timelineTeam].songScore.toLocaleString()} 分 ·
@@ -402,7 +402,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                             </span>
                           </h4>
                           <p className="timeline-order">
-                            最佳 Skill Order：
+                            最佳技能順序：
                             {ranked[timelineTeam].order
                               .map((cardIndex, slot) => `${slot + 1}. ${owned[cardIndex] ? memberName(owned[cardIndex]) : '?'}`)
                               .join('　')}
@@ -441,7 +441,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
 
                   <div className="song-score">
                     <p className="breakdown-label"
-                       title="依實際歌曲譜面、Combo、Special、Active、SAR 等時間點計算。">
+                       title="依實際歌曲譜面、Combo、特殊技能、主動技能、技能發動率加成（SAR）等時間點計算。">
                       指定歌曲理論預估分（Perfect 假設）
                     </p>
                     <b>{outcome.best.score.toLocaleString()}</b>
@@ -457,7 +457,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                       const style = attributeStyle(card.type);
                       return (
                         <li key={slot} style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}>
-                          <span className="order-slot">Special {slot + 1}</span>
+                          <span className="order-slot">特殊技能 {slot + 1}</span>
                           {images?.url(card.id)
                             ? <img src={images.url(card.id)} alt="" width={192} height={108} />
                             : <span className="slot-noart">{style.label}</span>}
@@ -472,11 +472,11 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                     <div><dt>加成後總合力</dt><dd>{outcome.detail.totalPower.toLocaleString()}</dd></div>
                     <div><dt>PERFECT 基礎分</dt><dd>{outcome.detail.perfectNoteScore.toLocaleString()}</dd></div>
                     <div><dt>譜面除數</dt><dd>{outcome.detail.scoreRatio.toFixed(2)}</dd></div>
-                    <div><dt>Active 實際貢獻</dt><dd>+{outcome.detail.activeBonus.toFixed(1)}%</dd></div>
+                    <div><dt>主動技能實際貢獻</dt><dd>+{outcome.detail.activeBonus.toFixed(1)}%</dd></div>
                   </dl>
                   <p className="song-source">除數來源：{outcome.detail.ratioSource}</p>
                   <p className="metric-note">
-                    這個數字依實際歌曲譜面、Combo、Special、Active、SAR 等時間點逐音符計算，與「隊伍最佳化」的綜合推薦指數量綱不同，兩者不能互相比較。
+                    這個數字依實際歌曲譜面、Combo、特殊技能、主動技能、技能發動率加成（SAR）等時間點逐音符計算，與「隊伍最佳化」的綜合推薦指數量綱不同，兩者不能互相比較。
                   </p>
 
                   {/* The same component on the same detail object the score above
@@ -484,7 +484,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                       bestOrder, so the windows and coverages were sitting unused. */}
                   <section className="timeline-block">
                     <h4>
-                      Timeline 分析
+                      時間軸分析
                       <span>{outcome.best.score.toLocaleString()} 分 · 最佳站位</span>
                     </h4>
                     <SongTimeline

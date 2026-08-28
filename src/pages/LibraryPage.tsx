@@ -137,10 +137,10 @@ function CardDetail({ card: selected, bundle, images, bloom, setBloom }: {
 
           <div className="detail-skills">
             {([
-              ['Passive', passiveText(data?.support)],
-              ['Active', activeText(data?.active)],
-              ['Special', specialText(data?.special)],
-              ['Leader Outfit', outfitText(leader?.outfits[String(shown)])],
+              ['被動技能', passiveText(data?.support)],
+              ['主動技能', activeText(data?.active)],
+              ['特殊技能', specialText(data?.special)],
+              ['隊長服裝', outfitText(leader?.outfits[String(shown)])],
             ] as const).map(([label, text]) => (
               <section key={label}>
                 <h4>{label}</h4>

@@ -87,7 +87,7 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
           <span className="leader-crest">隊長</span>
           {imageUrl(leaderCardId)
             ? <img src={imageUrl(leaderCardId)} alt="" loading="lazy" width={192} height={108} />
-            : <span className="team-noart">Outfit</span>}
+            : <span className="team-noart">隊長服裝</span>}
           <span className="team-member-name">{leaderTalent}</span>
           <span className="team-member-title">{leaderCostume || '—'}</span>
           <span className="leader-role">{leaderAlsoPlays ? '服裝＋上場' : '僅提供服裝'}</span>
@@ -113,19 +113,19 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
         <div className="team-breakdown">
           <ol className="chain">
             <li><span>五張卡基礎能力</span><b>{breakdown.basePower.toLocaleString()}</b></li>
-            <li><span>Passive／Outfit 加成後</span><b>{breakdown.totalPower.toLocaleString()}</b></li>
-            <li><span>× Active 期望倍率</span><b>{(value / (breakdown.totalPower || 1)).toFixed(3)}</b></li>
+            <li><span>被動／隊長服裝加成後</span><b>{breakdown.totalPower.toLocaleString()}</b></li>
+            <li><span>× 主動技能期望倍率</span><b>{(value / (breakdown.totalPower || 1)).toFixed(3)}</b></li>
             <li className="is-result"><span>綜合推薦指數</span><b>{Math.round(value).toLocaleString()}</b></li>
           </ol>
           <dl className="chain-parts">
-            <div><dt>Active 期望</dt><dd>+{breakdown.activeScoreUp.toFixed(1)}%</dd></div>
-            <div><dt>Passive Score Support</dt><dd>+{breakdown.passiveSupport.toFixed(0)}</dd></div>
-            <div><dt>Outfit Score Support</dt><dd>+{breakdown.leaderSupport.toFixed(0)}</dd></div>
-            <div><dt>Special 時間平均</dt><dd>+{breakdown.specialSupport.toFixed(1)}</dd></div>
+            <div><dt>主動技能期望</dt><dd>+{breakdown.activeScoreUp.toFixed(1)}%</dd></div>
+            <div><dt>被動技能分數支援</dt><dd>+{breakdown.passiveSupport.toFixed(0)}</dd></div>
+            <div><dt>隊長服裝分數支援</dt><dd>+{breakdown.leaderSupport.toFixed(0)}</dd></div>
+            <div><dt>特殊技能時間平均</dt><dd>+{breakdown.specialSupport.toFixed(1)}</dd></div>
           </dl>
           {bloomOf && <PassiveConditions members={members} leader={leader} bloomOf={bloomOf} />}
           <p className="chain-note">
-            Score Support 本身不會加分，只在 Active 生效時放大它；Special 以 192 秒的參考長度取平均。綜合推薦指數是用來快速比較大量隊伍的相對值，不是實際 Live 分數；想看分數請到「歌曲／順序」。
+            分數支援本身不會加分，只在主動技能生效時放大它；特殊技能以 192 秒的參考長度取平均。綜合推薦指數是用來快速比較大量隊伍的相對值，不是實際 Live 分數；想看分數請到「歌曲／順序」。
           </p>
         </div>
       )}

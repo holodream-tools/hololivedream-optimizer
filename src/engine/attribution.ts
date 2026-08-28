@@ -100,36 +100,36 @@ export function attributeGeneric(a: GenericView, b: GenericView): AttributionRep
       log: power(a.basePower, b.basePower), a: a.basePower, b: b.basePower,
     },
     {
-      label: 'Passive 能力加成', unit: 'points',
+      label: '被動技能能力加成', unit: 'points',
       log: power(a.passiveGain, b.passiveGain), a: a.passiveGain, b: b.passiveGain,
     },
     {
-      label: 'Leader（Outfit）能力加成', unit: 'points',
+      label: '隊長服裝能力加成', unit: 'points',
       log: power(a.outfitGain, b.outfitGain), a: a.outfitGain, b: b.outfitGain,
     },
     {
-      label: 'Active 期望', unit: 'percent',
+      label: '主動技能期望', unit: 'percent',
       log: mult(a.activeScoreUpNoSar / 100, b.activeScoreUpNoSar / 100),
       a: a.activeScoreUpNoSar, b: b.activeScoreUpNoSar,
     },
     {
-      label: 'SAR（技能發動率）', unit: 'percent',
+      label: '技能發動率加成（SAR）', unit: 'percent',
       log: mult((a.activeScoreUp - a.activeScoreUpNoSar) / 100,
                 (b.activeScoreUp - b.activeScoreUpNoSar) / 100),
       a: a.sarPoints, b: b.sarPoints,
     },
     {
-      label: 'Passive Score Support', unit: 'raw',
+      label: '被動技能分數支援', unit: 'raw',
       log: mult(cross(a, a.passiveSupport), cross(b, b.passiveSupport)),
       a: a.passiveSupport, b: b.passiveSupport,
     },
     {
-      label: 'Outfit Score Support', unit: 'raw',
+      label: '隊長服裝分數支援', unit: 'raw',
       log: mult(cross(a, a.leaderSupport), cross(b, b.leaderSupport)),
       a: a.leaderSupport, b: b.leaderSupport,
     },
     {
-      label: 'Special Score Support', unit: 'raw',
+      label: '特殊技能分數支援', unit: 'raw',
       log: mult(cross(a, a.specialSupport), cross(b, b.specialSupport)),
       a: a.specialSupport, b: b.specialSupport,
     },
@@ -174,12 +174,12 @@ export function attributeChart(
       a: a.view.basePower, b: b.view.basePower,
     },
     {
-      label: 'Passive 能力加成', unit: 'points' as const,
+      label: '被動技能能力加成', unit: 'points' as const,
       log: power(a.view.passiveGain, b.view.passiveGain),
       a: a.view.passiveGain, b: b.view.passiveGain,
     },
     {
-      label: 'Leader（Outfit）能力加成', unit: 'points' as const,
+      label: '隊長服裝能力加成', unit: 'points' as const,
       log: power(a.view.outfitGain, b.view.outfitGain),
       a: a.view.outfitGain, b: b.view.outfitGain,
     },
