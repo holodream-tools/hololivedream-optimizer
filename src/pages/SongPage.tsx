@@ -245,6 +245,24 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
     };
   };
 
+  /*
+   * A chart key names one song at one difficulty -- m0001:4 is Expert and
+   * nothing else -- so switching the difficulty filter leaves the panel on the
+   * right showing, and scoring, a chart the list on the left no longer offers.
+   *
+   * Tested against the same predicate the list uses rather than assuming the
+   * key must now be stale: what decides it is whether the chart is still on
+   * offer, which is the thing that actually matters if keys ever change shape.
+   * Deliberately not the search box: hiding a chart by typing is not a reason
+   * to unpick it.
+   */
+  useEffect(() => {
+    if (!charts || !chartKey) return;
+    const chart = charts.charts.find((row) => row.key === chartKey);
+    if (chart && (!difficulty || chart.difficulty === difficulty)) return;
+    setChartKey('');
+  }, [charts, chartKey, difficulty, setChartKey]);
+
   // A result belongs to one song at one depth; changing either invalidates it.
   useEffect(() => {
     runIdRef.current += 1;
