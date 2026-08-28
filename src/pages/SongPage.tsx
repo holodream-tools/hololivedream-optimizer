@@ -192,7 +192,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
     const cardId = leader.id.replace(/^outfit:/, '');
     const alsoPlays = members.some((card) => card.id === cardId);
     return `隊長服裝：${leaderName(leader as never)}`
-      + (alsoPlays ? '' : '（本人沒有上場，只借用服裝效果）');
+      + (alsoPlays ? '' : '（僅套用服裝效果）');
   };
 
   /** The picked team on this chart, exactly as the panel above reports it. */

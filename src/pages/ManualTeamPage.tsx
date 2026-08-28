@@ -164,7 +164,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
       headline: { label: '綜合推薦指數', value: Math.round(evaluation.index).toLocaleString() },
       stats: evaluation.figures.filter((row) => row.onCard),
       leaderLine: `隊長服裝：${leaderName(evaluation.leader)}`
-        + (alsoPlays ? '' : '（本人沒有上場，只借用服裝效果）'),
+        + (alsoPlays ? '' : '（僅套用服裝效果）'),
       members: evaluation.members.map((card) => ({
         cardId: card.id,
         name: memberName(card),
