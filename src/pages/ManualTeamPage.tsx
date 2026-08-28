@@ -24,7 +24,9 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
     }));
   const setLeaderId = (id: string) => setPrefs({ manualLeaderId: id });
   const [query, setQuery] = useState('');
-  const [copied, setCopied] = useState(false);
+  // What the share bar is currently saying back, if anything. A string rather
+  // than a boolean because copying and a declined share are different events.
+  const [shareNote, setShareNote] = useState('');
 
   const evaluation = useMemo(() => {
     if (picked.length !== 5 || !leaderId) return null;
@@ -53,6 +55,69 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
       members, leader,
     };
   }, [picked, leaderId, owned, unlockedLeaders, inventory]);
+
+  const teamReady = picked.length === 5 && !!leaderId;
+
+  /**
+   * The link, from the same builder the page has always used.
+   *
+   * Deliberately not a second URL format: `shareUrl` owns what a shared team
+   * carries and how it decodes, and both buttons here go through it.
+   */
+  const buildUrl = () => {
+    const blooms: Record<string, number> = {};
+    for (const id of [...picked, pickedLeaderCard]) if (id) blooms[id] = bloomOf(id);
+    return shareUrl({
+      members: picked, leaderId, blooms,
+      songKey: songKey || undefined, difficulty: prefs.difficulty,
+    });
+  };
+
+  const say = (message: string) => {
+    setShareNote(message);
+    window.setTimeout(() => setShareNote(''), 2600);
+  };
+
+  /** Copy, or hand the link over when the clipboard refuses. */
+  const copyLink = async () => {
+    if (!teamReady) return;
+    const url = buildUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      say('分享連結已複製');
+    } catch {
+      // Clipboard refused (no permission, or an insecure origin): put the link
+      // where it can still be copied by hand.
+      window.prompt('複製這個連結：', url);
+    }
+  };
+
+  /**
+   * The system share sheet where there is one, the clipboard where there is not.
+   *
+   * A cancelled sheet is not a failure -- the browser reports the user closing
+   * it as an AbortError, and falling back to a copy there would mean tapping
+   * "cancel" silently put something on their clipboard. Anything else is a
+   * share that could not happen, so the link still gets copied.
+   */
+  const share = async () => {
+    if (!teamReady) return;
+    const url = buildUrl();
+    if (!navigator.share) {
+      await copyLink();
+      return;
+    }
+    try {
+      await navigator.share({
+        title: 'hololive Dreams 隊伍最佳化',
+        text: '分享我的 hololive Dreams 隊伍',
+        url,
+      });
+    } catch (cause) {
+      if ((cause as Error)?.name === 'AbortError') return;
+      await copyLink();
+    }
+  };
 
   const pickedLeader = unlockedLeaders.find((row) => row.id === leaderId) ?? null;
   const pickedLeaderCard = pickedLeader?.id.replace(/^outfit:/, '') ?? '';
@@ -142,31 +207,31 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
         })}
       </div>
 
+      {/* Under the team rather than in the card-pool filter row: what gets
+          shared is the five above plus the Leader Outfit and their Blooms, and
+          the button has to sit next to the thing it acts on for that to be
+          obvious. */}
+      <div className="team-actions">
+        <p className="team-actions-what">
+          分享目前的 5 名成員、隊長服裝與命座
+          {!teamReady && <span>（選滿 5 人並指定隊長服裝後可用）</span>}
+        </p>
+        <div className="team-actions-buttons">
+          <button className="primary team-share-button" disabled={!teamReady}
+                  onClick={() => void share()}>
+            分享隊伍
+          </button>
+          <button disabled={!teamReady} onClick={() => void copyLink()}>
+            複製連結
+          </button>
+        </div>
+        {shareNote && <p className="team-actions-note" role="status">{shareNote}</p>}
+      </div>
+
       <div className="filters">
         <input type="search" value={query} placeholder="搜尋持有卡"
                onChange={(event) => setQuery(event.target.value)} />
         <button onClick={() => setPicked([])} disabled={!picked.length}>清空</button>
-        <button
-          disabled={picked.length !== 5 || !leaderId}
-          onClick={async () => {
-            const blooms: Record<string, number> = {};
-            for (const id of [...picked, pickedLeaderCard]) if (id) blooms[id] = bloomOf(id);
-            const url = shareUrl({
-              members: picked, leaderId, blooms,
-              songKey: songKey || undefined, difficulty: prefs.difficulty,
-            });
-            try {
-              await navigator.clipboard.writeText(url);
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 2000);
-            } catch {
-              // Clipboard refused (no permission, or an insecure origin):
-              // put the link where it can still be copied by hand.
-              window.prompt('複製這個連結：', url);
-            }
-          }}>
-          {copied ? '已複製 ✓' : '複製分享連結'}
-        </button>
         <button
           disabled={!evaluation || evaluation.duplicate}
           onClick={() => {

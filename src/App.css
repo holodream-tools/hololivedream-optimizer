@@ -445,6 +445,24 @@ button:disabled { opacity: .45; cursor: default; }
 .tagline { margin: 0 0 14px; font-size: 12.5px; line-height: 1.7; color: var(--ink-3);
            overflow-wrap: anywhere; }
 
+/* ---- share the team ----
+   Sits under the five slots, not in the card-pool filter row, because what it
+   shares is the team above it. Buttons are the existing .primary and default
+   ones; nothing new was invented for this. */
+.team-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+                margin: 0 0 14px; }
+.team-actions-what { margin: 0; flex: 1 1 260px; min-width: 0; font-size: 12.5px;
+                     line-height: 1.6; color: var(--ink-3); overflow-wrap: anywhere; }
+.team-actions-what span { color: var(--ink-3); opacity: .8; }
+.team-actions-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+/* Smaller than the sweep's Run button: this is a page action, not the point of
+   the page, and .primary at full size would outrank the team itself. */
+.team-share-button { padding: 8px 18px; font-size: 14px; }
+/* The whole line, so it cannot squeeze the buttons; it clears itself after a
+   moment, and role=status announces it without stealing focus. */
+.team-actions-note { flex-basis: 100%; margin: 0; font-size: 12.5px; font-weight: 650;
+                     color: var(--brand); }
+
 /* ---- first-run hint ----
    The site's own accent, not a warning colour: this is the one thing a new
    visitor has to read, and on the neutral surface it used to sit on it read as
