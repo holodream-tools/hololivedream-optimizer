@@ -20,10 +20,16 @@ export function FirstRunHint({ state }: { state: AppState }) {
 
   return (
     <aside className="firstrun" aria-label="使用提示">
+      {/* The clauses are joined as expressions, not as adjacent text lines:
+          JSX puts a space between two lines of text, and a space after a
+          full-width comma is wrong in Chinese. The three tab names carry the
+          whole instruction, so they are the part that has to survive a
+          glance. */}
       <p>
-        <b>第一次使用？</b>
-        先到「我的卡片」設定持有卡，再到「隊伍最佳化」找推薦隊伍，
-        最後可到「歌曲／順序」分析指定歌曲。
+        <b className="firstrun-lead">第一次使用？</b>
+        先到「<b className="firstrun-step">我的卡片</b>{'」設定持有卡，再到「'}
+        <b className="firstrun-step">隊伍最佳化</b>{'」找推薦隊伍，最後可到「'}
+        <b className="firstrun-step">歌曲／順序</b>{'」分析指定歌曲。'}
       </p>
       <div className="firstrun-actions">
         <button type="button" className="ghost"

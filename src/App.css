@@ -446,18 +446,28 @@ button:disabled { opacity: .45; cursor: default; }
            overflow-wrap: anywhere; }
 
 /* ---- first-run hint ----
-   Quieter than .fresh and .error on purpose: it is advice, not news, and it
-   sits above every page. Neutral surface, no accent colour, and the text is
-   the only thing with any weight to it. */
+   The site's own accent, not a warning colour: this is the one thing a new
+   visitor has to read, and on the neutral surface it used to sit on it read as
+   a footnote. Tinted ground, accent hairline, and a 3px edge on the left --
+   the same bar .team-members uses to mark the row that matters. Still one
+   strip of text: no icon, no heading, nothing that stops the page. */
 .firstrun { display: flex; gap: 10px 16px; align-items: flex-start; flex-wrap: wrap;
-            background: var(--surface-2); border: 1px solid var(--line);
-            border-radius: 10px; padding: 10px 12px; margin: 0 0 18px; }
-.firstrun p { margin: 0; flex: 1 1 260px; min-width: 0; font-size: 13px; line-height: 1.7;
+            background: var(--brand-soft); border: 1px solid var(--brand-line);
+            border-left: 3px solid var(--brand);
+            border-radius: 10px; padding: 12px 14px; margin: 0 0 18px; }
+.firstrun p { margin: 0; flex: 1 1 260px; min-width: 0; font-size: 13.5px; line-height: 1.8;
               color: var(--ink-2); overflow-wrap: anywhere; }
-.firstrun b { color: var(--ink); font-weight: 650; margin-right: 2px; }
+/* The question leads in the accent; the three tab names are what the sentence
+   is actually for, so they get the ink and the weight. */
+.firstrun-lead { color: var(--brand); font-weight: 750; margin-right: 3px; }
+.firstrun-step { color: var(--ink); font-weight: 700; }
 /* Kept together so they wrap as a pair rather than the ✕ dropping alone. */
 .firstrun-actions { display: flex; gap: 6px; align-items: center; margin-left: auto; }
-.firstrun-actions button { font-size: 12px; padding: 4px 10px; color: var(--ink-3); }
+/* Transparent on the tint: solid chips would sit on top of the strip rather
+   than in it, and would pull more attention than the sentence. */
+.firstrun-actions button { font-size: 12px; padding: 4px 10px; background: transparent;
+                           border-color: var(--brand-line); color: var(--ink-3); }
+.firstrun-actions button:hover:not(:disabled) { border-color: var(--brand); color: var(--ink-2); }
 .firstrun-close { padding: 4px 8px; line-height: 1; }
 
 /* ---- density switch ---- */
