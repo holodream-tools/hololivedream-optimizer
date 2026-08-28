@@ -439,6 +439,21 @@ button:disabled { opacity: .45; cursor: default; }
          border: 1px solid var(--pure-line); border-radius: 8px; padding: 9px 13px;
          margin: 0 0 16px; }
 
+/* ---- first-run hint ----
+   Quieter than .fresh and .error on purpose: it is advice, not news, and it
+   sits above every page. Neutral surface, no accent colour, and the text is
+   the only thing with any weight to it. */
+.firstrun { display: flex; gap: 10px 16px; align-items: flex-start; flex-wrap: wrap;
+            background: var(--surface-2); border: 1px solid var(--line);
+            border-radius: 10px; padding: 10px 12px; margin: 0 0 18px; }
+.firstrun p { margin: 0; flex: 1 1 260px; min-width: 0; font-size: 13px; line-height: 1.7;
+              color: var(--ink-2); overflow-wrap: anywhere; }
+.firstrun b { color: var(--ink); font-weight: 650; margin-right: 2px; }
+/* Kept together so they wrap as a pair rather than the ✕ dropping alone. */
+.firstrun-actions { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.firstrun-actions button { font-size: 12px; padding: 4px 10px; color: var(--ink-3); }
+.firstrun-close { padding: 4px 8px; line-height: 1; }
+
 /* ---- density switch ---- */
 .density { display: flex; gap: 3px; margin-left: auto; }
 .density button { padding: 6px 11px; font-size: 12.5px; }

@@ -12,6 +12,7 @@ import { ComparePage } from './pages/ComparePage';
 import { ManualTeamPage } from './pages/ManualTeamPage';
 import { OptimizerPage } from './pages/OptimizerPage';
 import { SongPage } from './pages/SongPage';
+import { FirstRunHint } from './ui/FirstRunHint';
 import './App.css';
 
 const TABS = [
@@ -63,6 +64,7 @@ export default function App() {
       </nav>
 
       <main className="page">
+        <FirstRunHint state={state} />
         {state.error && <p className="error">{state.error}</p>}
         {state.newCards.length > 0 && (
           <p className="fresh">

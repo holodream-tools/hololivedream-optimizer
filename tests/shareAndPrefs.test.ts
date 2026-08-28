@@ -123,6 +123,35 @@ describe('saved settings', () => {
     expect(back.difficulty).toBe(DEFAULT_PREFS.difficulty);
   });
 
+  it('shows the first-run hint until it is dismissed for good', () => {
+    // Default is "not dismissed", so a visitor with nothing stored sees it.
+    expect(DEFAULT_PREFS.hintDismissed).toBe(false);
+
+    savePrefs({ ...DEFAULT_PREFS, hintDismissed: true });
+    expect(loadPrefs().hintDismissed).toBe(true);
+
+    // Clearing saved settings brings it back, which is the only way back.
+    clearPrefs();
+    expect(loadPrefs().hintDismissed).toBe(false);
+  });
+
+  it('treats a record written before the hint existed as not dismissed', () => {
+    // The field was added without a VERSION bump, so records that predate it
+    // still load. Anything but a literal true means the player never chose.
+    localStorage.setItem(PREFS_KEY, JSON.stringify({
+      version: 1, prefs: { manualPicks: ['a_5'], shownCount: 20 },
+    }));
+    expect(loadPrefs().hintDismissed).toBe(false);
+    expect(loadPrefs().manualPicks).toEqual(['a_5']);
+
+    for (const value of ['true', 1, {}, null]) {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({
+        version: 1, prefs: { hintDismissed: value },
+      }));
+      expect(loadPrefs().hintDismissed).toBe(false);
+    }
+  });
+
   it('keeps at most five picks', () => {
     savePrefs({ ...DEFAULT_PREFS, manualPicks: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] });
     expect(loadPrefs().manualPicks).toHaveLength(5);

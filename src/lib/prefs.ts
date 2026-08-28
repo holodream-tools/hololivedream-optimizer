@@ -29,6 +29,16 @@ export interface Prefs {
   minDistinctMembers: number;
   /** How many ranked rows the optimiser shows. */
   shownCount: number;
+  /**
+   * Whether the first-run hint was dismissed for good.
+   *
+   * Absent from anything written before this field existed, and `sanitise`
+   * gives those the default -- which shows the hint, the right answer for
+   * someone who never chose to hide it. That is why adding it needs no
+   * VERSION bump: the old records are still readable, they just say nothing
+   * about this, and saying nothing means "not dismissed".
+   */
+  hintDismissed: boolean;
 }
 
 export const DEFAULT_PREFS: Prefs = {
@@ -39,6 +49,7 @@ export const DEFAULT_PREFS: Prefs = {
   oneLeaderPerTeam: true,
   minDistinctMembers: 0,
   shownCount: 20,
+  hintDismissed: false,
 };
 
 /** Coerce whatever was stored into a valid Prefs; never throw, never trust. */
@@ -59,6 +70,7 @@ function sanitise(raw: unknown): Prefs {
       ? Math.max(0, Math.min(5, Number(row.minDistinctMembers))) : 0,
     shownCount: Number.isFinite(row.shownCount)
       ? Math.max(5, Math.min(30, Number(row.shownCount))) : DEFAULT_PREFS.shownCount,
+    hintDismissed: row.hintDismissed === true,
   };
 }
 
