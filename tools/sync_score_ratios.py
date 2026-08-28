@@ -77,6 +77,8 @@ def main() -> int:
 
     ratios, source = fetch_ratios()
     bundle = json.loads(CHARTS.read_text(encoding="utf-8"))
+    # A pristine copy to diff against before writing; see the invariant below.
+    before = json.loads(CHARTS.read_text(encoding="utf-8"))
     charts = bundle["charts"]
     print(f"upstream  {len(ratios)} divisors from {source}")
     print(f"local     {len(charts)} charts")
@@ -114,6 +116,20 @@ def main() -> int:
     if not args.apply:
         print("\nDry run. Nothing was written; pass --apply to write.")
         return 0
+
+    # This is the one automated path with permission to push, and it writes the
+    # same file the chart data lives in. The loop above only ever assigns
+    # scoreRatioEstimated, so the charts cannot move -- but "cannot" is worth
+    # checking rather than trusting, because the failure it guards against is a
+    # scheduled job silently rewriting the song list.
+    after = json.loads(json.dumps(bundle))
+    for chart in after["charts"]:
+        chart.pop("scoreRatioEstimated", None)
+    for chart in before["charts"]:
+        chart.pop("scoreRatioEstimated", None)
+    if after["charts"] != before["charts"]:
+        print("\nFAILED: something other than the divisors changed. Refusing to write.")
+        return 1
 
     bundle["scoreRatioSource"] = SIMULATOR
     CHARTS.write_text(
