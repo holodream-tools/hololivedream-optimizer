@@ -24,7 +24,19 @@
     <meta property="og:site_name" content="hololive Dreams 隊伍最佳化" />
     <meta property="og:locale" content="zh_TW" />
 
-    <meta name="twitter:card" content="summary" />
+    <!-- Absolute, like the canonical: a scraper resolves this without the page's
+         base, so a relative path would 404 from the domain root. Dimensions are
+         declared so a card can be laid out before the image has downloaded. -->
+    <meta property="og:image" content="https://holodream-tools.github.io/hololivedream-optimizer/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="hololive Dreams 隊伍最佳化：歌曲分析、最佳站位與隊伍比較。畫面顯示五個站位的技能時間軸。" />
+
+    <!-- summary_large_image rather than summary, now that there is a 1200x630
+         image worth giving the space to. -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://holodream-tools.github.io/hololivedream-optimizer/og-image.png" />
+    <meta name="twitter:image:alt" content="hololive Dreams 隊伍最佳化：歌曲分析、最佳站位與隊伍比較。" />
     <meta name="twitter:title" content="hololive Dreams 隊伍最佳化｜歌曲分析、最佳站位與隊伍比較" />
     <meta name="twitter:description" content="hololive Dreams 非官方隊伍最佳化工具，可依持有卡、命座與歌曲譜面推薦隊伍、計算最佳站位、分析技能 Timeline，並比較不同隊伍的分數差異。" />
   </head>
