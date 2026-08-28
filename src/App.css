@@ -469,9 +469,10 @@ button:disabled { opacity: .45; cursor: default; }
 /* Smaller than the sweep's Run button: this is a page action, not the point of
    the page, and .primary at full size would outrank the team itself. */
 .team-share-button { padding: 8px 18px; font-size: 14px; }
-/* The 分享圖卡 menu. Anchored to its button, right-aligned so it cannot run
-   off the edge on a narrow screen, and using the same surface, border and
-   radius as every other panel on the site. */
+/* The 分享圖卡 fallbacks, shown only when the browser cannot hand the image to
+   a share sheet. Anchored to the button, right-aligned so it cannot run off
+   the edge on a narrow screen, and using the same surface, border and radius
+   as every other panel on the site. */
 .card-share { position: relative; }
 .card-share-menu { position: absolute; z-index: 30; top: calc(100% + 6px); right: 0;
                    min-width: 168px; display: grid;
@@ -485,9 +486,6 @@ button:disabled { opacity: .45; cursor: default; }
 .card-share-menu a:hover, .card-share-menu button:hover {
   background: var(--surface-2); color: var(--ink); border-color: transparent;
 }
-/* A hairline above the two that are not an outside service. */
-.card-share-menu button:first-of-type { border-top: 1px solid var(--line-soft);
-                                        margin-top: 4px; padding-top: 10px; }
 
 /* The whole line, so it cannot squeeze the buttons; it clears itself after a
    moment, and role=status announces it without stealing focus. */

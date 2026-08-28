@@ -27,8 +27,8 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
   // What the share bar is currently saying back, if anything. A string rather
   // than a boolean because copying and a declined share are different events.
   const [shareNote, setShareNote] = useState('');
-  // The 分享圖卡 menu. Its own state, because it shares the site rather than
-  // the team and stays usable when no team is picked yet.
+  // The 分享圖卡 fallbacks. Their own state, because that button shares the
+  // site's card rather than the team and stays usable before anyone is picked.
   const [cardMenuOpen, setCardMenuOpen] = useState(false);
   const cardMenuRef = useRef<HTMLDivElement>(null);
 
@@ -124,7 +124,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
   };
 
   /**
-   * The site's own address, for sharing the page rather than a team.
+   * The site's own address, the base the card's own address resolves against.
    *
    * origin + pathname, the same two parts `shareUrl` builds on, minus the
    * team fragment -- so there is no second idea of "where this site lives"
@@ -136,44 +136,93 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
   const SITE_TEXT = 'hololive Dreams 非官方隊伍最佳化工具：歌曲分析、最佳站位與隊伍比較';
 
   /**
-   * Where 分享圖卡 can send you.
+   * The share card itself: the PNG social sites already render for a link to
+   * this page, at its own address.
    *
-   * Each of these renders the page's Open Graph card on the far side, which is
-   * the point: the link carries no team, so what the recipient sees is the
-   * site's own preview image. Nothing here touches the team encoding.
+   * Resolved against `siteUrl` rather than written out, so on the deployed
+   * site it is
+   * https://holodream-tools.github.io/hololivedream-optimizer/og-image.png
+   * and on a dev server it is the local copy of that same file. Either way it
+   * is same-origin, which is what lets the fetch and the download work at all.
    */
-  const cardTargets = () => {
-    const url = encodeURIComponent(siteUrl());
-    const text = encodeURIComponent(SITE_TEXT);
-    return [
-      { key: 'line', label: 'LINE',
-        href: `https://social-plugins.line.me/lineit/share?url=${url}` },
-      { key: 'x', label: 'X',
-        href: `https://x.com/intent/tweet?url=${url}&text=${text}` },
-      { key: 'facebook', label: 'Facebook',
-        href: `https://www.facebook.com/sharer/sharer.php?u=${url}` },
-    ];
-  };
+  const cardUrl = () => new URL('og-image.png', siteUrl()).href;
 
-  const shareSite = async () => {
-    setCardMenuOpen(false);
-    if (!navigator.share) return;
+  const CARD_NAME = 'hololive-dreams-optimizer.png';
+  // Kept after the first fetch: a second attempt, which is exactly what
+  // happens when the first one could not go through, should be instant.
+  const cardBlob = useRef<Blob | null>(null);
+
+  /**
+   * Can this browser hand a file to a share sheet?
+   *
+   * Asked with an empty stand-in rather than the real image because the answer
+   * is needed *before* anything is awaited: the no-support path opens a tab,
+   * and a tab may only be opened while the click that asked for it is still
+   * running. `canShare` weighs the type and the count, not the bytes.
+   */
+  const canShareFiles = () => {
+    if (!navigator.share || !navigator.canShare) return false;
     try {
-      await navigator.share({ title: SITE_TITLE, text: SITE_TEXT, url: siteUrl() });
-    } catch (cause) {
-      if ((cause as Error)?.name === 'AbortError') return;
-      await copySite();
+      return navigator.canShare({ files: [new File([], CARD_NAME, { type: 'image/png' })] });
+    } catch {
+      return false;
     }
   };
 
-  const copySite = async () => {
+  const cardFile = async () => {
+    if (!cardBlob.current) {
+      const response = await fetch(cardUrl(), { cache: 'force-cache' });
+      if (!response.ok) throw new Error(`og-image.png: ${response.status}`);
+      cardBlob.current = await response.blob();
+    }
+    return new File([cardBlob.current], CARD_NAME, { type: 'image/png' });
+  };
+
+  /**
+   * Share the picture, not a link to it.
+   *
+   * Where Web Share carries files -- phones, mostly -- this hands over the PNG
+   * itself, so it lands in the conversation as an image rather than as a link
+   * someone has to open. Where it does not, there is nothing to hand over: the
+   * card is opened so it can be saved or forwarded by hand, with the two ways
+   * of doing that offered underneath the button.
+   *
+   * No url in the payload. Sending one alongside the file is how several
+   * targets end up posting the link and dropping the image, which is the one
+   * outcome this button exists to avoid.
+   */
+  const shareCard = async () => {
+    if (!canShareFiles()) {
+      // Still inside the click, so this is a tab the person asked for rather
+      // than a popup the browser blocks.
+      window.open(cardUrl(), '_blank', 'noopener,noreferrer');
+      setCardMenuOpen(true);
+      return;
+    }
     setCardMenuOpen(false);
-    const url = siteUrl();
+    try {
+      const file = await cardFile();
+      if (!navigator.canShare?.({ files: [file] })) throw new Error('the sheet refused the file');
+      await navigator.share({ files: [file], title: SITE_TITLE, text: SITE_TEXT });
+    } catch (cause) {
+      // A closed sheet is a decision, not a failure.
+      if ((cause as Error)?.name === 'AbortError') return;
+      // The image would not load, or the await outlived the gesture. Opening a
+      // tab from here would be blocked, so put the same fallbacks on screen
+      // and let the person pick one.
+      say('無法直接分享圖片，請改用下面的方式');
+      setCardMenuOpen(true);
+    }
+  };
+
+  const copyCardUrl = async () => {
+    setCardMenuOpen(false);
+    const url = cardUrl();
     try {
       await navigator.clipboard.writeText(url);
-      say('網站連結已複製');
+      say('圖卡網址已複製');
     } catch {
-      window.prompt('複製這個連結：', url);
+      window.prompt('複製這個圖卡網址：', url);
     }
   };
 
@@ -291,34 +340,28 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
           <b>分享連結</b>：帶著目前的 5 名成員、隊長服裝與命座
           {!teamReady && <span>（選滿 5 人並指定隊長服裝後可用）</span>}
           <br />
-          <b>分享圖卡</b>：分享這個網站，不含你的隊伍
+          <b>分享圖卡</b>：分享網站的預覽圖片本身，不含你的隊伍
         </p>
         <div className="team-actions-buttons">
           <button className="primary team-share-button" disabled={!teamReady}
                   onClick={() => void share()}>
             分享連結
           </button>
-          {/* Its own menu rather than the system sheet alone: on a desktop
-              browser there is often no sheet at all, and the named services
-              are where this actually gets shared. */}
+          {/* One button, two outcomes, decided by what the browser can do:
+              the file where that is possible, and where it is not, the card
+              opened with the ways of keeping it listed underneath. */}
           <div className="card-share" ref={cardMenuRef}>
             <button aria-haspopup="menu" aria-expanded={cardMenuOpen}
-                    onClick={() => setCardMenuOpen((open) => !open)}>
-              分享圖卡 ▾
+                    onClick={() => void shareCard()}>
+              分享圖卡
             </button>
             {cardMenuOpen && (
               <div className="card-share-menu" role="menu">
-                {cardTargets().map((target) => (
-                  <a key={target.key} role="menuitem" href={target.href}
-                     target="_blank" rel="noopener noreferrer"
-                     onClick={() => setCardMenuOpen(false)}>
-                    {target.label}
-                  </a>
-                ))}
-                {!!navigator.share && (
-                  <button role="menuitem" onClick={() => void shareSite()}>系統分享…</button>
-                )}
-                <button role="menuitem" onClick={() => void copySite()}>複製網站連結</button>
+                <a role="menuitem" href={cardUrl()} target="_blank" rel="noopener noreferrer"
+                   onClick={() => setCardMenuOpen(false)}>開啟圖卡</a>
+                <a role="menuitem" href={cardUrl()} download={CARD_NAME}
+                   onClick={() => setCardMenuOpen(false)}>下載圖卡</a>
+                <button role="menuitem" onClick={() => void copyCardUrl()}>複製圖卡網址</button>
               </div>
             )}
           </div>
