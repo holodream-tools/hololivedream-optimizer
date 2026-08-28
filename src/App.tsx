@@ -35,16 +35,22 @@ type TabId = (typeof TABS)[number]['id'];
  * 我的卡片 -- the first step of 我的卡片 → 隊伍最佳化 → 歌曲／順序, and the
  * page the hint above the content points at first.
  *
- * Two visits keep 卡片庫, both because they are not first visits:
- *   - anyone with a saved inventory, who has already done that step
- *   - anyone arriving on a shared link, whose landing place is decided by the
- *     restore that link triggers, not by this default
+ * A shared link opens 自選隊伍 instead, because that is where its team lands:
+ * the five members, the Leader Outfit and the notice saying where they came
+ * from are all on that page, and anywhere else the visitor would have to go
+ * looking for what they followed the link to see. `decodeTeam` is the same
+ * check the restore itself makes, so a hash that reads here is a hash that
+ * restores -- deciding it now rather than after the restore means the page
+ * never paints the wrong tab first.
+ *
+ * Anyone with a saved inventory keeps 卡片庫: they are not a first visit and
+ * have already done that step.
  *
  * Read straight from storage rather than from `owned`, so it is decided once,
  * before the first paint, and cannot flip when the catalogue finishes loading.
  */
 function openingTab(): TabId {
-  if (decodeTeam(window.location.hash)) return 'library';
+  if (decodeTeam(window.location.hash)) return 'manual';
   return hasStored() ? 'library' : 'inventory';
 }
 
