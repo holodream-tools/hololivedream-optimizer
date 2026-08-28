@@ -163,57 +163,78 @@ export function useAppState(): AppState {
   // Restore what was saved, then let a shared link override it. The link wins
   // because the player followed it on purpose; the saved settings are only what
   // they happened to be doing last time.
-  // Runs once. StrictMode invokes effects twice in development, and this one
-  // consumes the URL and writes storage: doing that twice miscounted what a
-  // link had added and, once the hash was gone, would restore the saved picks
-  // over the shared ones.
+  //
+  // The mount half runs once. StrictMode invokes effects twice in development,
+  // and it consumes the URL and writes storage: doing that twice miscounted
+  // what a link had added and, once the hash was gone, would restore the saved
+  // picks over the shared ones.
   const bootstrapped = useRef(false);
   useEffect(() => {
-    if (!bundle || bootstrapped.current) return;
-    bootstrapped.current = true;
+    if (!bundle) return;
 
-    const stored = loadPrefs();
-    const team = decodeTeam(window.location.hash);
-    if (!team) { setPrefsState(stored); setSongKeyState(stored.songKey); return; }
+    const restore = (team: SharedTeam) => {
+      const stored = loadPrefs();
+      const known = new Set(bundle.cards.map((card) => card.id));
+      const leaderCard = team.leaderId.replace(/^outfit:/, '');
+      // The Outfit's card is often one of the five as well, and counting it
+      // twice would overstate what the link added.
+      const wanted = [...new Set([...team.members, leaderCard])].filter((id) => known.has(id));
 
-    const known = new Set(bundle.cards.map((card) => card.id));
-    const leaderCard = team.leaderId.replace(/^outfit:/, '');
-    // The Outfit's card is often one of the five as well, and counting it twice
-    // would overstate what the link added.
-    const wanted = [...new Set([...team.members, leaderCard])].filter((id) => known.has(id));
+      // A link is additive: cards it needs are switched on with the Bloom it
+      // carried, so the team scores the same here as it did there. Nothing the
+      // recipient already owns is turned off, and nothing is removed.
+      const next = load(bundle);
+      const added = wanted.filter((id) => !next.get(id)?.owned);
+      for (const id of wanted) {
+        const row = next.get(id) ?? emptyRow(id);
+        const bloom = team.blooms[id];
+        next.set(id, {
+          ...row,
+          owned: 1,
+          bloom: bloom === undefined ? row.bloom : bloom,
+          leader_unlocked: id === leaderCard ? 1 : row.leader_unlocked,
+        });
+      }
+      save(next);
+      setInventory(next);
+      setStamp((value) => value + 1);
 
-    // A link is additive: cards it needs are switched on with the Bloom it
-    // carried, so the team scores the same here as it did there. Nothing the
-    // recipient already owns is turned off, and nothing is removed.
-    const next = load(bundle);
-    const added = wanted.filter((id) => !next.get(id)?.owned);
-    for (const id of wanted) {
-      const row = next.get(id) ?? emptyRow(id);
-      const bloom = team.blooms[id];
-      next.set(id, {
-        ...row,
-        owned: 1,
-        bloom: bloom === undefined ? row.bloom : bloom,
-        leader_unlocked: id === leaderCard ? 1 : row.leader_unlocked,
-      });
-    }
-    save(next);
-    setInventory(next);
-    setStamp((value) => value + 1);
-
-    const restored: Prefs = {
-      ...stored,
-      manualPicks: team.members.filter((id) => known.has(id)),
-      manualLeaderId: team.leaderId,
-      songKey: team.songKey ?? stored.songKey,
-      difficulty: team.difficulty ?? stored.difficulty,
+      const restored: Prefs = {
+        ...stored,
+        manualPicks: team.members.filter((id) => known.has(id)),
+        manualLeaderId: team.leaderId,
+        songKey: team.songKey ?? stored.songKey,
+        difficulty: team.difficulty ?? stored.difficulty,
+      };
+      setPrefsState(restored);
+      setSongKeyState(restored.songKey);
+      savePrefs(restored);
+      // A fresh object every time, so a second link is a change the interface
+      // can see even when it carries the same team as the first.
+      setShared({ team, added });
+      // The payload has been consumed; leave a clean address bar behind.
+      // replaceState does not fire hashchange, so this cannot loop.
+      stripHash();
     };
-    setPrefsState(restored);
-    setSongKeyState(restored.songKey);
-    savePrefs(restored);
-    setShared({ team, added });
-    // The payload has been consumed; leave a clean address bar behind.
-    stripHash();
+
+    if (!bootstrapped.current) {
+      bootstrapped.current = true;
+      const stored = loadPrefs();
+      const team = decodeTeam(window.location.hash);
+      if (team) restore(team);
+      else { setPrefsState(stored); setSongKeyState(stored.songKey); }
+    }
+
+    // A link pasted into a tab that is already open changes only the fragment,
+    // and a browser does not reload the page for that -- so the mount half
+    // above never runs again and the link would sit in the address bar doing
+    // nothing. This is the same restore, on the same payload.
+    const onHashChange = () => {
+      const team = decodeTeam(window.location.hash);
+      if (team) restore(team);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
   }, [bundle]);
 
   const setPrefs = useCallback(

@@ -4,7 +4,7 @@
  * Everything runs in the browser: the sweep is sharded across Web Workers and
  * the inventory lives in localStorage, so there is no server and no account.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppState } from './lib/appState';
 import { InventoryPage } from './pages/InventoryPage';
 import { LibraryPage } from './pages/LibraryPage';
@@ -60,6 +60,15 @@ export default function App() {
   const [songTeam, setSongTeam] = useState<number | null>(null);
 
   const openSong = (index: number) => { setSongTeam(index); setTab('song'); };
+
+  // A link followed into a fresh tab is handled by openingTab, which reads the
+  // URL before the first paint. One pasted into a tab that is already open is
+  // not: the browser changes the fragment without reloading, so the restore
+  // happens under a page that is already showing something else. Follow the
+  // restore itself, which covers both and fires again for a second link
+  // because `shared` is a new object each time.
+  const shared = state.shared;
+  useEffect(() => { if (shared) setTab('manual'); }, [shared]);
 
   if (state.error && !state.bundle) return <main className="app"><p className="error">{state.error}</p></main>;
   if (!state.bundle) return <main className="app"><p className="loading">載入中…</p></main>;
