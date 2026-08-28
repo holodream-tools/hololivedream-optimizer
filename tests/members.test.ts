@@ -5,8 +5,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
-  GENERATION_ORDER, compareCards, compareGenerations, indexMembers, leaderName, memberName,
-  searchIndex, sortedGenerations,
+  GENERATION_ORDER, branchLabel, compareCards, compareGenerations, indexMembers, leaderName,
+  memberName, searchIndex, sortedGenerations,
 } from '../src/ui/members';
 import type { CardBundle, CardJson } from '../src/engine/types';
 
@@ -149,6 +149,11 @@ describe('search', () => {
     }
   });
 
+  it('finds a branch by the label shown on screen and by the stored name', () => {
+    expect(find('gamers').length).toBeGreaterThan(0);
+    expect(find('ゲーマーズ').length).toBe(find('gamers').length);
+  });
+
   it('finds fuwamoco as a pair', () => {
     const both = find('fuwamoco');
     expect(both).toContain('fuwawa_abyssgard_5');
@@ -165,6 +170,25 @@ describe('search', () => {
   it('still matches costume titles', () => {
     const withTitle = bundle.cards.find((card) => card.title)!;
     expect(searchIndex(withTitle)).toContain(withTitle.title.toLowerCase());
+  });
+});
+
+describe('branch labels', () => {
+  it('shows the unit\'s English name rather than its katakana spelling', () => {
+    expect(branchLabel('ゲーマーズ')).toBe('GAMERS');
+  });
+
+  it('leaves every other branch exactly as the data has it', () => {
+    const relabelled = [...new Set(bundle.cards.map((card) => card.generation))]
+      .filter((name) => branchLabel(name) !== name);
+    expect(relabelled).toEqual(['ゲーマーズ']);
+  });
+
+  it('still filters and sorts on the stored value, not the label', () => {
+    // The label is display only; the branch a card belongs to is unchanged.
+    const gamers = bundle.cards.filter((card) => card.generation === 'ゲーマーズ');
+    expect(gamers.length).toBeGreaterThan(0);
+    expect(sortedGenerations(bundle.cards)).toContain('ゲーマーズ');
   });
 });
 

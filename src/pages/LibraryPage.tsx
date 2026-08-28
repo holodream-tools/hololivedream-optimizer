@@ -4,12 +4,13 @@ import { activeText, outfitText, passiveText, specialText } from '../ui/skillTex
 import { ATTRIBUTES, attributeStyle } from '../ui/theme';
 import type { AppState } from '../lib/appState';
 import type { CardBundle, CardJson } from '../engine/types';
-import { compareCards, memberName, searchIndex } from '../ui/members';
+import { branchLabel, compareCards, memberName, searchIndex, sortedGenerations } from '../ui/members';
 
 export function LibraryPage({ state }: { state: AppState }) {
   const { bundle, images } = state;
   const [query, setQuery] = useState('');
   const [attribute, setAttribute] = useState('');
+  const [generation, setGeneration] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [bloom, setBloom] = useState<number | null>(null);
 
@@ -18,10 +19,13 @@ export function LibraryPage({ state }: { state: AppState }) {
     const needle = query.trim().toLowerCase();
     // Same order as the branch filter reads: JP by debut, then ID, then EN.
     return bundle.cards.filter((card) => {
+      if (generation && card.generation !== generation) return false;
       if (attribute && card.type.toLowerCase() !== attribute) return false;
       return !needle || searchIndex(card).includes(needle);
     }).sort(compareCards);
-  }, [bundle, query, attribute]);
+  }, [bundle, query, attribute, generation]);
+
+  const generations = useMemo(() => (bundle ? sortedGenerations(bundle.cards) : []), [bundle]);
 
   if (!bundle) return null;
 
@@ -47,6 +51,12 @@ export function LibraryPage({ state }: { state: AppState }) {
       <div className="filters">
         <input type="search" value={query} placeholder="搜尋成員或卡片名稱"
                onChange={(event) => setQuery(event.target.value)} />
+        <select value={generation} onChange={(event) => setGeneration(event.target.value)}>
+          <option value="">全部期生</option>
+          {generations.map((value) => (
+            <option key={value} value={value}>{branchLabel(value)}</option>
+          ))}
+        </select>
         <div className="attr-filter" role="group" aria-label="屬性篩選">
           <button className={attribute === '' ? 'is-on' : ''} onClick={() => setAttribute('')}>全部</button>
           {ATTRIBUTES.map((value) => {
@@ -81,7 +91,7 @@ export function LibraryPage({ state }: { state: AppState }) {
 
         {selected
           ? <CardDetail card={selected} bundle={bundle} images={images} bloom={bloom} setBloom={setBloom} />
-          : <p className="empty">換個關鍵字試試，或按「全部」清掉屬性篩選。</p>}
+          : <p className="empty">換個關鍵字試試，或把期生／屬性篩選清掉。</p>}
       </div>
     </>
   );
@@ -106,7 +116,7 @@ function CardDetail({ card: selected, bundle, images, bloom, setBloom }: {
             : <div className="detail-noart">{style.label}</div>}
 
           <header className="detail-head">
-            <p className="detail-badge">{style.label} · {selected.generation}</p>
+            <p className="detail-badge">{style.label} · {branchLabel(selected.generation)}</p>
             <h3>{memberName(selected)}</h3>
             <p className="detail-title">{selected.title || '—'}</p>
           </header>

@@ -5,6 +5,7 @@ import { ATTRIBUTES, attributeStyle } from '../ui/theme';
 import type { AppState } from '../lib/appState';
 import type { CardJson } from '../engine/types';
 import { compareCards, memberName, searchIndex, sortedGenerations } from '../ui/members';
+import { branchLabel } from '../ui/members';
 
 type Sort = 'power' | 'name' | 'generation';
 
@@ -70,7 +71,9 @@ export function InventoryPage({ state }: { state: AppState }) {
                onChange={(event) => setQuery(event.target.value)} />
         <select value={generation} onChange={(event) => setGeneration(event.target.value)}>
           <option value="">全部期生</option>
-          {generations.map((value) => <option key={value} value={value}>{value}</option>)}
+          {generations.map((value) => (
+            <option key={value} value={value}>{branchLabel(value)}</option>
+          ))}
         </select>
         <div className="attr-filter" role="group" aria-label="屬性篩選">
           <button className={attribute === '' ? 'is-on' : ''} onClick={() => setAttribute('')}>全部</button>

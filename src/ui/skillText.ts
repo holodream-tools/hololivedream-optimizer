@@ -5,6 +5,7 @@
  * the engine does not model returns null rather than a guess.
  */
 import type { OutfitPayload, SkillJson } from '../engine/types';
+import { branchLabel } from './members';
 
 const STAT_LABEL: Record<string, string> = {
   all: '全能力', performance: '表現力', technique: '技巧', sense: '品味',
@@ -21,7 +22,7 @@ function conditionText(condition: unknown): string | null {
   if (!condition || typeof condition !== 'object') return null;
   const row = condition as { type?: string; type_name?: string; group?: string; min_count?: number };
   if (row.type === 'type_count') return `隊上 ${attribute(row.type_name)} ${row.min_count ?? 0} 人以上時`;
-  if (row.type === 'group_count') return `隊上 ${row.group} ${row.min_count ?? 0} 人以上時`;
+  if (row.type === 'group_count') return `隊上 ${branchLabel(String(row.group))} ${row.min_count ?? 0} 人以上時`;
   return null;
 }
 
@@ -31,7 +32,7 @@ function targetText(target: unknown): string {
     const row = target as { type_match?: string; group?: string; count?: number };
     const count = row.count ?? 0;
     if (row.type_match) return `${attribute(row.type_match)} 屬性中能力最高的 ${count} 人`;
-    if (row.group) return `${row.group} 中能力最高的 ${count} 人`;
+    if (row.group) return `${branchLabel(String(row.group))} 中能力最高的 ${count} 人`;
   }
   return '——';
 }

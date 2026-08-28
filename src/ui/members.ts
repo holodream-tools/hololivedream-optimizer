@@ -46,6 +46,24 @@ const NICKNAMES: Record<string, string[]> = {
   mococo_abyssgard: ['fuwamoco'],
 };
 
+/**
+ * Branch names that are a transliteration rather than a name.
+ *
+ * ゲーマーズ is the katakana spelling of the English word the unit is called,
+ * exactly as オーロ・クロニー is of Ouro Kronii, and it is the only one of the
+ * fifteen branches written that way -- the rest are either kanji, which reads
+ * as Chinese, or already Latin. The data carries no English branch name, so
+ * this one line is the whole mapping.
+ */
+const BRANCH_LABELS: Record<string, string> = {
+  'ゲーマーズ': 'GAMERS',
+};
+
+/** What to show for a branch. The stored value stays whatever the data says. */
+export function branchLabel(generation: string): string {
+  return BRANCH_LABELS[generation] ?? generation;
+}
+
 /** `ouro_kronii_5` -> `ouro_kronii`; the trailing number is the Bloom. */
 function stem(cardId: string): string {
   return cardId.replace(/^outfit:/, '').replace(/_\d+$/, '');
@@ -150,8 +168,10 @@ export function leaderName(leader: { id: string; name: string; talent?: string }
  */
 export function searchIndex(card: CardJson): string {
   const member = MEMBERS.get(card.talent);
-  return [card.name, card.title, card.generation, ...(member?.search ?? [])]
-    .join(' ').toLowerCase();
+  // Both spellings of the branch: a label shown on screen has to be typeable,
+  // and the stored one stays searchable for anyone who knows it.
+  return [card.name, card.title, card.generation, branchLabel(card.generation),
+    ...(member?.search ?? [])].join(' ').toLowerCase();
 }
 
 /** The same haystack for a Leader Outfit. */

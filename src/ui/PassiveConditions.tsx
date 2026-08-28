@@ -13,7 +13,7 @@
 import { conditionMet } from '../engine/overallScore';
 import { passiveText, outfitText } from './skillText';
 import type { CardJson, LeaderJson, OutfitCondition } from '../engine/types';
-import { leaderName, memberName } from './members';
+import { branchLabel, leaderName, memberName } from './members';
 
 export interface PassiveConditionsProps {
   members: CardJson[];
@@ -44,7 +44,7 @@ function shortfall(condition: OutfitCondition,
   }
   if (condition.type === 'group_count') {
     const have = generationCounts.get(String(condition.group)) ?? 0;
-    return `需要 ${condition.group} ≥${need}，目前只有 ${have}`;
+    return `需要 ${branchLabel(String(condition.group))} ≥${need}，目前只有 ${have}`;
   }
   return '條件不成立';
 }

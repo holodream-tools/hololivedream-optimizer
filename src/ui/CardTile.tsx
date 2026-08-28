@@ -13,6 +13,7 @@ import { activeText, passiveText, specialText } from './skillText';
 import { attributeStyle } from './theme';
 import type { CardJson } from '../engine/types';
 import { memberName } from './members';
+import { branchLabel } from './members';
 
 export type TileDensity = 'compact' | 'normal' | 'skills';
 
@@ -96,7 +97,7 @@ export function CardTile(props: CardTileProps) {
         <p className="tile-name">{memberName(card)}</p>
         <p className="tile-title">{card.title || '—'}</p>
         <p className="tile-meta">
-          <span>{card.generation}</span>
+          <span>{branchLabel(card.generation)}</span>
           <span className="tile-power">{power.toLocaleString()}</span>
         </p>
       </div>
