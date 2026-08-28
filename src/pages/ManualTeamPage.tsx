@@ -271,7 +271,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
           <b>分享連結</b>：帶著目前的 5 名成員、隊長服裝與命座
           {!teamReady && <span>（選滿 5 人並指定隊長服裝後可用）</span>}
           <br />
-          <b>分享圖卡</b>：把這五人與下面的分析畫成一張圖
+          <b>圖卡</b>：把這五人與下面的分析畫成一張圖，可分享或存檔
         </p>
         <div className="team-actions-buttons">
           <button className="primary team-share-button" disabled={!teamReady}

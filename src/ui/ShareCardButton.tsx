@@ -28,8 +28,34 @@ export interface ShareCardButtonProps {
 
 const TITLE = 'hololive Dreams 隊伍最佳化';
 
+/**
+ * Can this browser hand a file to a share sheet?
+ *
+ * Asked with an empty stand-in rather than a real card, because the answer is
+ * wanted before anything has been drawn: it decides what this button is called.
+ * `canShare` weighs the type and the count, not the bytes.
+ */
+function canShareFiles(filename: string): boolean {
+  if (!navigator.share || !navigator.canShare) return false;
+  try {
+    return navigator.canShare({ files: [new File([], filename, { type: 'image/png' })] });
+  } catch {
+    return false;
+  }
+}
+
 export function ShareCardButton({ data, images, disabled,
                                  filename = 'hololive-dreams-team.png' }: ShareCardButtonProps) {
+  /**
+   * What this button actually does here, decided once.
+   *
+   * Where the browser can pass a file to a share sheet, pressing this shares
+   * the card. Where it cannot, nothing is shared: a card is drawn and offered
+   * to open or to keep. Those are two different actions and the button is named
+   * after whichever one it is about to perform, rather than promising the one
+   * this device cannot do.
+   */
+  const [canShare] = useState(() => canShareFiles(filename));
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState('');
@@ -65,22 +91,6 @@ export function ShareCardButton({ data, images, disabled,
   };
 
   /**
-   * Can this browser hand a file to a share sheet?
-   *
-   * Asked with an empty stand-in, because the real card takes a moment to draw
-   * and the answer decides what that moment is spent on. `canShare` weighs the
-   * type and the count, not the bytes.
-   */
-  const canShareFiles = () => {
-    if (!navigator.share || !navigator.canShare) return false;
-    try {
-      return navigator.canShare({ files: [new File([], filename, { type: 'image/png' })] });
-    } catch {
-      return false;
-    }
-  };
-
-  /**
    * Put the finished card where it can be opened or kept.
    *
    * No message goes with it: the menu appearing under the button, naming the
@@ -103,7 +113,7 @@ export function ShareCardButton({ data, images, disabled,
     setOpen(false);
     try {
       const blob = await renderShareCard(payload, images);
-      if (!canShareFiles()) {
+      if (!canShare) {
         offer(blob);
         return;
       }
@@ -128,7 +138,7 @@ export function ShareCardButton({ data, images, disabled,
     <div className="card-share" ref={holder}>
       <button aria-haspopup="menu" aria-expanded={open} disabled={disabled || busy}
               onClick={() => void share()}>
-        {busy ? '產生中…' : '分享圖卡'}
+        {busy ? '產生中…' : canShare ? '分享圖卡' : '產生圖卡'}
       </button>
       {open && cardUrl && (
         <div className="card-share-menu" role="menu">
