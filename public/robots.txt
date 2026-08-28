@@ -1,0 +1,13 @@
+# hololive Dreams 隊伍最佳化
+# https://holodream-tools.github.io/hololivedream-optimizer/
+#
+# Note for anyone maintaining this: a robots.txt is only read from the domain
+# root, so crawlers fetch https://holodream-tools.github.io/robots.txt and never
+# this file. This site is served from a project sub-path, so this copy is
+# documentation rather than instruction. Nothing here restricts crawling, so the
+# absence of a root robots.txt leaves the site fully crawlable either way.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://holodream-tools.github.io/hololivedream-optimizer/sitemap.xml

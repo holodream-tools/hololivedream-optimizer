@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One entry, because there is one page. The interface is a single-page app: the
+  tabs swap what React renders without changing the URL, so there is no second
+  address a crawler could fetch and no second page to list. Listing invented
+  routes would only produce soft 404s.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://holodream-tools.github.io/hololivedream-optimizer/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
