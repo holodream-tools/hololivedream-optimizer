@@ -122,7 +122,7 @@ describe('song attribution', () => {
     for (const pair of pairs) {
       const a = sideOf(pair.a, pair.aLeader);
       const b = sideOf(pair.b, pair.bLeader);
-      const report = attributeChart(a, b, prepared);
+      const report = attributeChart(a, b);
 
       expect(sum(report.rows.map((row) => row.log))).toBeCloseTo(report.logGap, 10);
       expect(sum(report.rows.map((row) => row.percent))).toBeCloseTo(report.gap, 8);
@@ -130,28 +130,45 @@ describe('song attribution', () => {
     }
   });
 
-  it('keeps the rounding row small enough to be a rounding row', () => {
+  it('folds the quantisation into the power rows instead of listing it', () => {
     for (const pair of pairs) {
-      const report = attributeChart(sideOf(pair.a, pair.aLeader), sideOf(pair.b, pair.bLeader),
-        prepared);
-      const rounding = report.rows.find((row) => row.label === '取整與捨去')!;
+      const a = sideOf(pair.a, pair.aLeader);
+      const b = sideOf(pair.b, pair.bLeader);
+      const report = attributeChart(a, b);
+      expect(report.rows.map((row) => row.label)).not.toContain('取整與捨去');
+
+      // What the power rows would have been without the fold. The floors move
+      // them by a rounding error, which is the whole point of not listing it.
+      const powerMean = (a.view.totalPower - b.view.totalPower)
+        / (Math.log(a.view.totalPower) - Math.log(b.view.totalPower));
+      const raw = new Map([
+        ['基礎能力', (a.view.basePower - b.view.basePower) / powerMean],
+        ['Passive 能力加成', (a.view.passiveGain - b.view.passiveGain) / powerMean],
+        ['Leader（Outfit）能力加成', (a.view.outfitGain - b.view.outfitGain) / powerMean],
+      ]);
+      const scale = report.gap / report.logGap;
+      let moved = 0;
+      for (const [label, log] of raw) {
+        const row = report.rows.find((other) => other.label === label)!;
+        moved += Math.abs(row.percent - log * scale);
+      }
       // floor() on a six-figure score cannot account for a percentage point.
-      expect(Math.abs(rounding.percent)).toBeLessThan(0.5);
+      expect(moved).toBeLessThan(0.5);
     }
   });
 
   it('flips sign on swap and vanishes on identical teams', () => {
     const a = sideOf(pairs[0].a, pairs[0].aLeader);
     const b = sideOf(pairs[0].b, pairs[0].bLeader);
-    const forward = attributeChart(a, b, prepared);
-    const backward = attributeChart(b, a, prepared);
+    const forward = attributeChart(a, b);
+    const backward = attributeChart(b, a);
     expect(backward.logGap).toBeCloseTo(-forward.logGap, 12);
     for (const row of forward.rows) {
       const mirror = backward.rows.find((other) => other.label === row.label)!;
       expect(mirror.log).toBeCloseTo(-row.log, 12);
     }
 
-    const same = attributeChart(a, a, prepared);
+    const same = attributeChart(a, a);
     expect(same.gap).toBe(0);
     for (const row of same.rows) expect(row.log).toBeCloseTo(0, 12);
   });
@@ -159,7 +176,7 @@ describe('song attribution', () => {
   it('reads the chart figures, not the generic ones', () => {
     const a = sideOf(pairs[0].a, pairs[0].aLeader);
     const b = sideOf(pairs[1].a, pairs[1].aLeader);
-    const song = attributeChart(a, b, prepared);
+    const song = attributeChart(a, b);
     const generic = attributeGeneric(a.view, b.view);
 
     // The chart report is about the chart score; the generic one is about the

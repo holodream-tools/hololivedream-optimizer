@@ -163,7 +163,6 @@ export function ComparePage({ state }: { state: AppState }) {
     return attributeChart(
       { view: a.chartView, detail: a.chart.detail, score: a.chart.score },
       { view: b.chartView, detail: b.chart.detail, score: b.chart.score },
-      chart.prepared,
     );
   }, [a, b, chart]);
   const swap = useMemo(() => {
@@ -254,6 +253,11 @@ export function ComparePage({ state }: { state: AppState }) {
 
           <div className="cmp-scroll">
           <table className="cmp-table">
+            <colgroup>
+              <col />
+              <col className="cmp-col-num" /><col className="cmp-col-num" />
+              <col className="cmp-col-gap" />
+            </colgroup>
             <thead>
               <tr><th scope="col">項目</th><th scope="col">A</th><th scope="col">B</th><th scope="col">差距</th></tr>
             </thead>
@@ -323,11 +327,17 @@ export function ComparePage({ state }: { state: AppState }) {
                 report={chartAttribution}
                 note={'歌曲模式是在每個音符當下套用 Active、Special、SAR 和 Score Support，'
                   + '沒辦法像上面那樣拆開，所以合併成「本曲技能實際貢獻」一項。'
+                  + '分數有取整，誤差已經算進上面能力的三項裡（影響通常不到 0.1 個百分點）。'
                   + '下面的覆蓋率只是幫你看這一項發生在哪裡，不算在歸因裡，也不要跟時間軸上的 ↑ 箭頭混在一起看'
                   + '——那個箭頭講的是蓋到的音符值不值錢，跟這裡的貢獻百分比是兩回事。'}
               />
               <div className="cmp-scroll">
                 <table className="cmp-table">
+                  <colgroup>
+                    <col />
+                    <col className="cmp-col-num" /><col className="cmp-col-num" />
+                    <col className="cmp-col-gap" />
+                  </colgroup>
                   <thead>
                     <tr>
                       {/* Five members' windows overlap, so these sum past 100%. */}

@@ -150,11 +150,18 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
 
       <div className="cmp-scroll">
         <table className="cmp-table timeline-table">
+          <colgroup>
+            <col className="tl-col-slot" /><col className="tl-col-name" />
+            <col className="tl-col-skill" /><col className="tl-col-skill" />
+            <col className="tl-col-cov" /><col className="tl-col-cov" />
+            <col className="tl-col-score" />
+          </colgroup>
           <thead>
             <tr>
               <th scope="col">站位</th><th scope="col">成員</th>
               <th scope="col">Special</th><th scope="col">Active</th>
-              <th scope="col">時間覆蓋</th><th scope="col">音符覆蓋</th><th scope="col">分數覆蓋</th>
+              <th scope="col">時間覆蓋</th><th scope="col">音符覆蓋</th>
+              <th scope="col" className="tl-th-score">分數覆蓋</th>
             </tr>
           </thead>
           <tbody>
@@ -178,11 +185,18 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
                   <td>{row.activeWindows.length} 次 · +{row.activeScoreUp.toFixed(0)}%</td>
                   <td>{share(row.activeTimeCoverage)}</td>
                   <td>{share(row.activeNoteCoverage)}</td>
-                  <td className={Math.abs(lift) > 0.05 ? 'is-lead' : ''}>
-                    {share(row.activeScoreCoverage)}
-                    {Math.abs(lift) > 0.05 && (
-                      <span className="tl-lift">{lift > 0 ? '↑' : '↓'}{Math.abs(lift * 100).toFixed(0)}%</span>
-                    )}
+                  <td>
+                    <span className="tl-cov">
+                      <span>{share(row.activeScoreCoverage)}</span>
+                      {Math.abs(lift) > 0.05 && (
+                        <span className={`tl-lift ${lift > 0 ? 'is-up' : 'is-down'}`}
+                              title={lift > 0
+                                ? '蓋到的音符比平均值錢'
+                                : '蓋到的音符比平均便宜'}>
+                          <i>{lift > 0 ? '↑' : '↓'}</i>{Math.abs(lift * 100).toFixed(0)}%
+                        </span>
+                      )}
+                    </span>
                   </td>
                 </tr>
               );

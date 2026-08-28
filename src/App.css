@@ -165,6 +165,10 @@ button:disabled { opacity: .45; cursor: default; }
 .library-count { margin: 0; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
 .filters input[type="search"] { min-width: 220px; flex: 1; cursor: text; }
+/* A <select> sizes itself to its widest option, and the team picker's options
+   are five member names long. Left alone it pushes the page sideways on a
+   phone; the label is truncated instead, and the open list still shows it all. */
+.filters select { max-width: 100%; min-width: 0; }
 .attr-filter { display: flex; gap: 4px; }
 .attr-filter button { padding: 7px 12px; }
 .attr-filter button.is-on { background: var(--accent-soft, var(--surface-2));
@@ -332,7 +336,10 @@ button:disabled { opacity: .45; cursor: default; }
               text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---- song ---- */
-.song-split { display: grid; gap: 16px; grid-template-columns: 1fr; }
+/* minmax(0, 1fr), not 1fr: a grid item's automatic minimum is its content, so
+   a plain 1fr track lets the widest table inside push the whole page sideways
+   on a phone instead of scrolling inside its own box. */
+.song-split { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 900px) { .song-split { grid-template-columns: 320px minmax(0, 1fr); } }
 .song-list { list-style: none; margin: 0; padding: 0; max-height: 620px; overflow-y: auto;
              border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
@@ -353,8 +360,8 @@ button:disabled { opacity: .45; cursor: default; }
 .song-title { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis;
               white-space: nowrap; }
 .song-meta { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.song-detail { border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
-               padding: 18px; box-shadow: var(--shadow); }
+.song-detail { min-width: 0; border: 1px solid var(--line); border-radius: 12px;
+               background: var(--surface); padding: 18px; box-shadow: var(--shadow); }
 .song-head h3 { margin: 0; font-size: 18px; font-weight: 700; }
 .song-sub { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .song-score { margin: 16px 0; }
@@ -566,13 +573,22 @@ button:disabled { opacity: .45; cursor: default; }
 /* Four columns of numbers do not fold; on a narrow screen the table scrolls
    inside its own box rather than pushing the page sideways. */
 .cmp-scroll { overflow-x: auto; margin-bottom: 20px; }
-.cmp-table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 13px; }
+/* Fixed layout so the columns keep their places when the chosen song changes.
+   Under auto layout "9.8%" and "100.0%" size their column differently, and A
+   and B visibly jumped every time the song select moved. */
+.cmp-table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 13px;
+             table-layout: fixed; }
+.cmp-table col.cmp-col-num { width: 15%; }
+.cmp-table col.cmp-col-gap { width: 26%; }
 .cmp-table th, .cmp-table td { padding: 7px 10px; border-bottom: 1px solid var(--line-soft);
                                text-align: right; font-variant-numeric: tabular-nums; }
 .cmp-table thead th { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--ink-3);
                       border-bottom: 1px solid var(--line); }
 .cmp-table th[scope="row"], .cmp-table thead th:first-child { text-align: left; font-weight: 600;
                                                               color: var(--ink-2); }
+/* The label column is the one that has to give, and the header that names the
+   coverage table is a sentence long. */
+.cmp-table th[scope="row"], .cmp-table thead th:first-child { overflow-wrap: anywhere; }
 .cmp-table td.is-lead { font-weight: 750; color: var(--brand); background: var(--brand-soft); }
 .cmp-gap { color: var(--ink-3); font-size: 12px; white-space: nowrap; }
 .cmp-gap b { color: var(--ink-2); }
@@ -580,10 +596,12 @@ button:disabled { opacity: .45; cursor: default; }
 
 .cmp-songbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
 .cmp-songbar label { display: flex; gap: 8px; align-items: center; font-size: 13px;
-                     color: var(--ink-3); }
-.cmp-songbar select { max-width: 420px; }
+                     color: var(--ink-3); max-width: 100%; }
+/* 420px is a preference, not a floor: on a phone the viewport wins, or the song
+   list drags the page sideways. */
+.cmp-songbar select { max-width: min(420px, 100%); min-width: 0; }
 
-.cmp-members { display: grid; gap: 12px; grid-template-columns: 1fr; }
+.cmp-members { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 860px) { .cmp-members { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .cmp-member-panel { border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
                     padding: 12px 14px 14px; }
@@ -656,9 +674,32 @@ button:disabled { opacity: .45; cursor: default; }
 .tl-special { stroke: var(--surface); stroke-width: .6; }
 .timeline-legend { margin: 8px 0 12px; font-size: 11.5px; color: var(--ink-3); line-height: 1.6;
                    max-width: 76ch; }
-.timeline-table { font-size: 12px; }
-.timeline-table .tl-cell-name { text-align: left; }
-.tl-lift { margin-left: 5px; font-size: 10.5px; opacity: .85; }
+/* Seven columns, so they get their own widths under the shared fixed layout.
+   The score-coverage column carries a number and its lift chip side by side and
+   needs the room for both. */
+.timeline-table { font-size: 12px; min-width: 760px; --tl-lift-lane: 56px; }
+.timeline-table .tl-cell-name { text-align: left; overflow-wrap: anywhere; }
+.timeline-table col.tl-col-slot { width: 7%; }
+.timeline-table col.tl-col-name { width: 20%; }
+.timeline-table col.tl-col-skill { width: 14%; }
+.timeline-table col.tl-col-cov { width: 12%; }
+/* Wider than its neighbours: it carries the lift chip's reserved lane too. */
+.timeline-table col.tl-col-score { width: 21%; }
+.timeline-table th.tl-th-score { padding-right: calc(10px + var(--tl-lift-lane) + 8px); }
+/* The lift sits beside the coverage, not against it: at 10.5px and 5px away it
+   read as part of the number. Its own chip, its own gap, an arrow big enough to
+   tell which way it points. */
+/* The lane is reserved whether or not this row has a lift, so the percentages
+   stay in one column instead of shuffling left on the rows that do. */
+.tl-cov { display: grid; grid-template-columns: 1fr var(--tl-lift-lane); gap: 8px;
+          align-items: baseline; white-space: nowrap; }
+.tl-cov > span:first-child { text-align: right; }
+.tl-lift { display: inline-flex; align-items: baseline; justify-content: flex-start;
+           gap: 3px; font-size: 12px;
+           font-weight: 650; font-variant-numeric: tabular-nums; }
+.tl-lift i { font-style: normal; font-size: 15px; line-height: 1; }
+.tl-lift.is-up { color: var(--brand); }
+.tl-lift.is-down { color: var(--ink-3); }
 /* The rank table doubles as the timeline's picker. */
 .song-rank-table tbody tr { cursor: pointer; }
 .song-rank-table tbody tr:hover { background: var(--surface-2); }
