@@ -4,7 +4,7 @@ import { activeText, outfitText, passiveText, specialText } from '../ui/skillTex
 import { ATTRIBUTES, attributeStyle } from '../ui/theme';
 import type { AppState } from '../lib/appState';
 import type { CardBundle, CardJson } from '../engine/types';
-import { memberName, searchIndex } from '../ui/members';
+import { compareCards, memberName, searchIndex } from '../ui/members';
 
 export function LibraryPage({ state }: { state: AppState }) {
   const { bundle, images } = state;
@@ -16,10 +16,11 @@ export function LibraryPage({ state }: { state: AppState }) {
   const visible = useMemo(() => {
     if (!bundle) return [];
     const needle = query.trim().toLowerCase();
+    // Same order as the branch filter reads: JP by debut, then ID, then EN.
     return bundle.cards.filter((card) => {
       if (attribute && card.type.toLowerCase() !== attribute) return false;
       return !needle || searchIndex(card).includes(needle);
-    });
+    }).sort(compareCards);
   }, [bundle, query, attribute]);
 
   if (!bundle) return null;

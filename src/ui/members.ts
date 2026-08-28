@@ -105,6 +105,19 @@ export function compareGenerations(a: string, b: string): number {
   return x - y || a.localeCompare(b, 'ja');
 }
 
+/**
+ * Catalogue order: branch first, then the member's romanised id.
+ *
+ * The id rather than the displayed name, for two reasons. It is one alphabet
+ * for every branch, so a JP member and an EN member sort against each other
+ * consistently instead of by whichever script they happen to be written in.
+ * And a member's costumes share its prefix -- `airani_iofifteen_5` then
+ * `airani_iofifteen_swim_5` -- so they stay next to each other.
+ */
+export function compareCards(a: CardJson, b: CardJson): number {
+  return compareGenerations(a.generation, b.generation) || a.id.localeCompare(b.id, 'en');
+}
+
 /** The branches present in the data, in listing order. */
 export function sortedGenerations(cards: readonly CardJson[]): string[] {
   return [...new Set(cards.map((card) => card.generation))].sort(compareGenerations);

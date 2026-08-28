@@ -5,7 +5,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
-  GENERATION_ORDER, compareGenerations, leaderName, memberName, searchIndex, sortedGenerations,
+  GENERATION_ORDER, compareCards, compareGenerations, leaderName, memberName, searchIndex,
+  sortedGenerations,
 } from '../src/ui/members';
 import type { CardBundle, CardJson } from '../src/engine/types';
 
@@ -117,6 +118,29 @@ describe('branch order', () => {
     const unknown = [...new Set(bundle.cards.map((card) => card.generation))]
       .filter((name) => !GENERATION_ORDER.includes(name));
     expect(unknown).toEqual([]);
+  });
+
+  it('orders the catalogue the same way the branch filter reads', () => {
+    const sorted = [...bundle.cards].sort(compareCards);
+    const branches = sorted.map((card) => card.generation);
+    // Every branch appears as one unbroken run, in the filter's order.
+    const runs = branches.filter((name, index) => name !== branches[index - 1]);
+    expect(runs).toEqual([...new Set(runs)]);
+    expect(runs).toEqual(sortedGenerations(bundle.cards));
+  });
+
+  it('keeps a member\'s costumes next to each other', () => {
+    const sorted = [...bundle.cards].sort(compareCards);
+    const swim = sorted.findIndex((card) => card.id.includes('_swim'));
+    expect(swim).toBeGreaterThan(0);
+    const base = sorted[swim].id.replace('_swim', '');
+    expect(sorted[swim - 1].id).toBe(base);
+  });
+
+  it('sorts the same whatever order the bundle arrives in', () => {
+    const forwards = [...bundle.cards].sort(compareCards).map((card) => card.id);
+    const backwards = [...bundle.cards].reverse().sort(compareCards).map((card) => card.id);
+    expect(backwards).toEqual(forwards);
   });
 
   it('puts an unknown branch last instead of scrambling the rest', () => {

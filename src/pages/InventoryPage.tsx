@@ -4,7 +4,7 @@ import { CardTile, type TileDensity } from '../ui/CardTile';
 import { ATTRIBUTES, attributeStyle } from '../ui/theme';
 import type { AppState } from '../lib/appState';
 import type { CardJson } from '../engine/types';
-import { compareGenerations, searchIndex, sortedGenerations } from '../ui/members';
+import { compareCards, memberName, searchIndex, sortedGenerations } from '../ui/members';
 
 type Sort = 'power' | 'name' | 'generation';
 
@@ -14,7 +14,9 @@ export function InventoryPage({ state }: { state: AppState }) {
   const [generation, setGeneration] = useState('');
   const [attribute, setAttribute] = useState('');
   const [ownedOnly, setOwnedOnly] = useState(false);
-  const [sort, setSort] = useState<Sort>('power');
+  // Catalogue order by default: it matches the branch filter above the grid,
+  // so the list a player scans is in the order they think of the roster.
+  const [sort, setSort] = useState<Sort>('generation');
   const [density, setDensity] = useState<TileDensity>('normal');
 
   const generations = useMemo(
@@ -40,9 +42,10 @@ export function InventoryPage({ state }: { state: AppState }) {
     };
     const compare = {
       power: (a: CardJson, b: CardJson) => powerOf(b) - powerOf(a),
-      name: (a: CardJson, b: CardJson) => a.name.localeCompare(b.name, 'ja'),
-      generation: (a: CardJson, b: CardJson) =>
-        compareGenerations(a.generation, b.generation) || a.name.localeCompare(b.name, 'ja'),
+      // Sorts on what is displayed, which for ID and EN members is English.
+      name: (a: CardJson, b: CardJson) =>
+        memberName(a).localeCompare(memberName(b), 'ja') || a.id.localeCompare(b.id, 'en'),
+      generation: compareCards,
     }[sort];
     return [...rows].sort(compare);
     // `inventory` is read only for the owned-only filter; sorting deliberately
