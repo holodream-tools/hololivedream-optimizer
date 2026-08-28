@@ -1,5 +1,5 @@
 /** 自選隊伍 — score any five cards you pick, with the contributions broken out. */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { cardFacts, outfitTable } from '../engine/precompute';
 import { expectedIndexOf, leaderPowerAndSupport, makeMemberState, memberPart } from '../engine/overallScore';
 import { attributeStyle } from '../ui/theme';
@@ -27,6 +27,10 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
   // What the share bar is currently saying back, if anything. A string rather
   // than a boolean because copying and a declined share are different events.
   const [shareNote, setShareNote] = useState('');
+  // The 分享圖卡 menu. Its own state, because it shares the site rather than
+  // the team and stays usable when no team is picked yet.
+  const [cardMenuOpen, setCardMenuOpen] = useState(false);
+  const cardMenuRef = useRef<HTMLDivElement>(null);
 
   const evaluation = useMemo(() => {
     if (picked.length !== 5 || !leaderId) return null;
@@ -118,6 +122,77 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
       await copyLink();
     }
   };
+
+  /**
+   * The site's own address, for sharing the page rather than a team.
+   *
+   * origin + pathname, the same two parts `shareUrl` builds on, minus the
+   * team fragment -- so there is no second idea of "where this site lives"
+   * that could drift from the canonical.
+   */
+  const siteUrl = () => `${window.location.origin}${window.location.pathname}`;
+
+  const SITE_TITLE = 'hololive Dreams 隊伍最佳化';
+  const SITE_TEXT = 'hololive Dreams 非官方隊伍最佳化工具：歌曲分析、最佳站位與隊伍比較';
+
+  /**
+   * Where 分享圖卡 can send you.
+   *
+   * Each of these renders the page's Open Graph card on the far side, which is
+   * the point: the link carries no team, so what the recipient sees is the
+   * site's own preview image. Nothing here touches the team encoding.
+   */
+  const cardTargets = () => {
+    const url = encodeURIComponent(siteUrl());
+    const text = encodeURIComponent(SITE_TEXT);
+    return [
+      { key: 'line', label: 'LINE',
+        href: `https://social-plugins.line.me/lineit/share?url=${url}` },
+      { key: 'x', label: 'X',
+        href: `https://x.com/intent/tweet?url=${url}&text=${text}` },
+      { key: 'facebook', label: 'Facebook',
+        href: `https://www.facebook.com/sharer/sharer.php?u=${url}` },
+    ];
+  };
+
+  const shareSite = async () => {
+    setCardMenuOpen(false);
+    if (!navigator.share) return;
+    try {
+      await navigator.share({ title: SITE_TITLE, text: SITE_TEXT, url: siteUrl() });
+    } catch (cause) {
+      if ((cause as Error)?.name === 'AbortError') return;
+      await copySite();
+    }
+  };
+
+  const copySite = async () => {
+    setCardMenuOpen(false);
+    const url = siteUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      say('網站連結已複製');
+    } catch {
+      window.prompt('複製這個連結：', url);
+    }
+  };
+
+  // Click away or press Escape closes the menu, the two things anyone tries.
+  useEffect(() => {
+    if (!cardMenuOpen) return;
+    const onDown = (event: MouseEvent) => {
+      if (!cardMenuRef.current?.contains(event.target as Node)) setCardMenuOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setCardMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [cardMenuOpen]);
 
   const pickedLeader = unlockedLeaders.find((row) => row.id === leaderId) ?? null;
   const pickedLeaderCard = pickedLeader?.id.replace(/^outfit:/, '') ?? '';
@@ -213,17 +288,40 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
           obvious. */}
       <div className="team-actions">
         <p className="team-actions-what">
-          分享目前的 5 名成員、隊長服裝與命座
+          <b>分享連結</b>：帶著目前的 5 名成員、隊長服裝與命座
           {!teamReady && <span>（選滿 5 人並指定隊長服裝後可用）</span>}
+          <br />
+          <b>分享圖卡</b>：分享這個網站，不含你的隊伍
         </p>
         <div className="team-actions-buttons">
           <button className="primary team-share-button" disabled={!teamReady}
                   onClick={() => void share()}>
-            分享隊伍
+            分享連結
           </button>
-          <button disabled={!teamReady} onClick={() => void copyLink()}>
-            複製連結
-          </button>
+          {/* Its own menu rather than the system sheet alone: on a desktop
+              browser there is often no sheet at all, and the named services
+              are where this actually gets shared. */}
+          <div className="card-share" ref={cardMenuRef}>
+            <button aria-haspopup="menu" aria-expanded={cardMenuOpen}
+                    onClick={() => setCardMenuOpen((open) => !open)}>
+              分享圖卡 ▾
+            </button>
+            {cardMenuOpen && (
+              <div className="card-share-menu" role="menu">
+                {cardTargets().map((target) => (
+                  <a key={target.key} role="menuitem" href={target.href}
+                     target="_blank" rel="noopener noreferrer"
+                     onClick={() => setCardMenuOpen(false)}>
+                    {target.label}
+                  </a>
+                ))}
+                {!!navigator.share && (
+                  <button role="menuitem" onClick={() => void shareSite()}>系統分享…</button>
+                )}
+                <button role="menuitem" onClick={() => void copySite()}>複製網站連結</button>
+              </div>
+            )}
+          </div>
         </div>
         {shareNote && <p className="team-actions-note" role="status">{shareNote}</p>}
       </div>
