@@ -26,3 +26,4 @@ dist-ssr
 # Card artwork is hot-linked from where it is published, not redistributed here.
 # Regenerate a local copy for offline work with tools/export_images.py.
 public/cards/
+__pycache__/

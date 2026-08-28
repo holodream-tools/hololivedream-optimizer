@@ -1,0 +1,99 @@
+name: Sync score divisors
+
+# The per-chart divisor sets the scale of every song score the site reports,
+# and upstream recalibrates it as more charts get measured. Ours were frozen at
+# whenever somebody last ran the script by hand.
+#
+# Only this half of the data is scheduled. The chart timelines come from a
+# different project whose licence position is unresolved, so their sync tool
+# exists but is deliberately not wired to a schedule -- see DATA_SOURCES.md in
+# the desktop project.
+
+on:
+  schedule:
+    # Weekly, Monday 03:00 UTC. The divisors move rarely; anything more often
+    # would mostly be a job that says "no change" into an empty room.
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Commit the change (off = report only)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: sync-score-ratios
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Fails the run on partial coverage rather than writing a file that is
+      # half fresh and half stale.
+      - name: Fetch divisors
+        id: sync
+        run: |
+          python3 tools/sync_score_ratios.py --apply | tee sync.log
+          if git diff --quiet -- public/data/charts.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The numbers feed the engine, so a change has to survive the same parity
+      # tests a code change does before it can reach the site.
+      - uses: actions/setup-node@v4
+        if: steps.sync.outputs.changed == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - if: steps.sync.outputs.changed == 'true'
+        run: npm ci
+
+      - name: Verify the engine still agrees with its reference
+        if: steps.sync.outputs.changed == 'true'
+        run: npm test
+
+      - name: Commit
+        if: steps.sync.outputs.changed == 'true' && inputs.apply != false
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add public/data/charts.json
+          git commit -F - <<'EOF'
+          Refresh the score divisors from Hololive Dreams Lab
+
+          Automated: .github/workflows/sync-score-ratios.yml. Only
+          scoreRatioEstimated is touched, and only where upstream now
+          disagrees with what was stored. The engine's parity tests ran
+          against the new numbers before this commit.
+          EOF
+          git push
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### Score divisor sync'
+            echo
+            if [ "${{ steps.sync.outputs.changed }}" = 'true' ]; then
+              echo 'Divisors changed. Details:'
+            else
+              echo 'No change; every divisor already matched upstream.'
+            fi
+            echo
+            echo '```'
+            cat sync.log 2>/dev/null || echo '(the fetch step failed before writing a log)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
