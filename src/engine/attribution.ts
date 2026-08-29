@@ -38,7 +38,7 @@ export interface AttributionRow {
   a: number;
   b: number;
   /** How to print a and b. */
-  unit?: 'points' | 'percent' | 'raw';
+  unit?: 'points' | 'percent';
 }
 
 export interface AttributionReport {
@@ -119,17 +119,17 @@ export function attributeGeneric(a: GenericView, b: GenericView): AttributionRep
       a: a.sarPoints, b: b.sarPoints,
     },
     {
-      label: '被動技能分數支援', unit: 'raw',
+      label: '被動技能分數支援', unit: 'percent',
       log: mult(cross(a, a.passiveSupport), cross(b, b.passiveSupport)),
       a: a.passiveSupport, b: b.passiveSupport,
     },
     {
-      label: '隊長服裝分數支援', unit: 'raw',
+      label: '隊長服裝分數支援', unit: 'percent',
       log: mult(cross(a, a.leaderSupport), cross(b, b.leaderSupport)),
       a: a.leaderSupport, b: b.leaderSupport,
     },
     {
-      label: '特殊技能分數支援', unit: 'raw',
+      label: '特殊技能分數支援', unit: 'percent',
       log: mult(cross(a, a.specialSupport), cross(b, b.specialSupport)),
       a: a.specialSupport, b: b.specialSupport,
     },

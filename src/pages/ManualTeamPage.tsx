@@ -79,9 +79,11 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
       { label: '技巧', value: stats[1].toLocaleString(), onCard: true },
       { label: '品味', value: stats[2].toLocaleString(), onCard: true },
       { label: '主動技能期望', value: `+${activeScoreUp.toFixed(1)}%`, onCard: true },
-      { label: '被動技能分數支援', value: `+${staticSupport.toFixed(0)}`, onCard: true },
-      { label: '隊長服裝分數支援', value: `+${leaderSupport.toFixed(0)}`, onCard: true },
-      { label: '特殊技能時間平均', value: `+${specialSupport.toFixed(1)}`, onCard: true },
+      // Percentages like the Active expectation above: all three reach the
+      // score through the same `/ 100`, so all three carry the unit.
+      { label: '被動技能分數支援', value: `+${staticSupport.toFixed(0)}%`, onCard: true },
+      { label: '隊長服裝分數支援', value: `+${leaderSupport.toFixed(0)}%`, onCard: true },
+      { label: '特殊技能時間平均', value: `+${specialSupport.toFixed(1)}%`, onCard: true },
     ];
 
     return {

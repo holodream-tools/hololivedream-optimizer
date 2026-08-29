@@ -117,9 +117,9 @@ export function TeamRow({ rank, value, members, leader, images, best, onOpenSong
           </ol>
           <dl className="chain-parts">
             <div><dt>主動技能期望</dt><dd>+{breakdown.activeScoreUp.toFixed(1)}%</dd></div>
-            <div><dt>被動技能分數支援</dt><dd>+{breakdown.passiveSupport.toFixed(0)}</dd></div>
-            <div><dt>隊長服裝分數支援</dt><dd>+{breakdown.leaderSupport.toFixed(0)}</dd></div>
-            <div><dt>特殊技能時間平均</dt><dd>+{breakdown.specialSupport.toFixed(1)}</dd></div>
+            <div><dt>被動技能分數支援</dt><dd>+{breakdown.passiveSupport.toFixed(0)}%</dd></div>
+            <div><dt>隊長服裝分數支援</dt><dd>+{breakdown.leaderSupport.toFixed(0)}%</dd></div>
+            <div><dt>特殊技能時間平均</dt><dd>+{breakdown.specialSupport.toFixed(1)}%</dd></div>
           </dl>
           {bloomOf && <PassiveConditions members={members} leader={leader} bloomOf={bloomOf} />}
           <p className="chain-note">

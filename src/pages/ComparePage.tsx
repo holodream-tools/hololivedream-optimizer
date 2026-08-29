@@ -113,7 +113,13 @@ function AttributionPanel({ title, report, note }: {
 }
 
 const int = (value: number) => Math.round(value).toLocaleString();
-const one = (value: number) => value.toFixed(1);
+/**
+ * Percentage points, which is what every non-power figure on this page is:
+ * Score Support, SAR and the Active effect all reach the score through a
+ * `/ 100`, so the unit belongs on the number rather than in the reader's head.
+ * Distinct from `share`, which renders a 0..1 ratio as a percentage.
+ */
+const points = (value: number) => `${value.toFixed(1)}%`;
 const share = (value: number) => `${(value * 100).toFixed(1)}%`;
 
 export function ComparePage({ state }: { state: AppState }) {
@@ -265,13 +271,13 @@ export function ComparePage({ state }: { state: AppState }) {
               <DiffRow label="被動技能能力加成" a={a.generic.passiveGain} b={b.generic.passiveGain} format={int} />
               <DiffRow label="隊長服裝能力加成" a={a.generic.outfitGain} b={b.generic.outfitGain} format={int} />
               <DiffRow label="最終總合力" a={a.generic.totalPower} b={b.generic.totalPower} format={int} />
-              <DiffRow label="被動技能分數支援" a={a.generic.passiveSupport} b={b.generic.passiveSupport} format={one} />
-              <DiffRow label="特殊技能分數支援" a={a.generic.specialSupport} b={b.generic.specialSupport} format={one}
+              <DiffRow label="被動技能分數支援" a={a.generic.passiveSupport} b={b.generic.passiveSupport} format={points} />
+              <DiffRow label="特殊技能分數支援" a={a.generic.specialSupport} b={b.generic.specialSupport} format={points}
                        hint="以 192 秒的參考長度取平均" />
-              <DiffRow label="隊長服裝分數支援" a={a.generic.leaderSupport} b={b.generic.leaderSupport} format={one} />
-              <DiffRow label="技能發動率加成（SAR）" a={a.generic.sarPoints} b={b.generic.sarPoints} format={one}
+              <DiffRow label="隊長服裝分數支援" a={a.generic.leaderSupport} b={b.generic.leaderSupport} format={points} />
+              <DiffRow label="技能發動率加成（SAR）" a={a.generic.sarPoints} b={b.generic.sarPoints} format={points}
                        hint="每個 Rate Up 依自己的持續時間，對 192 秒取平均" />
-              <DiffRow label="主動技能平均效果" a={a.generic.activeScoreUp} b={b.generic.activeScoreUp} format={one} />
+              <DiffRow label="主動技能平均效果" a={a.generic.activeScoreUp} b={b.generic.activeScoreUp} format={points} />
               <DiffRow label="主動技能時間覆蓋" a={a.generic.activeTimeCoverage} b={b.generic.activeTimeCoverage}
                        format={share} hint="至少一個主動技能生效的時間比例" />
               <DiffRow label="綜合推薦指數" a={a.generic.index} b={b.generic.index} format={int} />
@@ -279,7 +285,7 @@ export function ComparePage({ state }: { state: AppState }) {
                 <>
                   <DiffRow label="指定歌曲預估分" a={a.chart.score} b={b.chart.score} format={int}
                            hint="Perfect 全連假設，兩邊各自用自己的最佳站位" />
-                  <DiffRow label="主動技能實際貢獻" a={a.chart.detail.activeBonus} b={b.chart.detail.activeBonus} format={one} />
+                  <DiffRow label="主動技能實際貢獻" a={a.chart.detail.activeBonus} b={b.chart.detail.activeBonus} format={points} />
                 </>
               )}
             </tbody>
@@ -397,10 +403,10 @@ export function ComparePage({ state }: { state: AppState }) {
                               <div><dt>三項能力合計</dt><dd>{int(direct.base)}</dd></div>
                               <div><dt>被動技能受益</dt><dd>+{int(direct.passiveGain)}</dd></div>
                               <div><dt>隊長服裝受益</dt><dd>+{int(direct.outfitGain)}</dd></div>
-                              <div><dt>被動技能分數支援</dt><dd>+{one(direct.passiveSupport)}</dd></div>
-                              <div><dt>特殊技能時間平均</dt><dd>+{one(direct.specialSupport)}</dd></div>
-                              <div><dt>技能發動率加成貢獻</dt><dd>+{one(direct.sarPoints)}</dd></div>
-                              <div><dt>主動技能效果</dt><dd>+{one(direct.activeScoreUp)}%</dd></div>
+                              <div><dt>被動技能分數支援</dt><dd>+{points(direct.passiveSupport)}</dd></div>
+                              <div><dt>特殊技能時間平均</dt><dd>+{points(direct.specialSupport)}</dd></div>
+                              <div><dt>技能發動率加成貢獻</dt><dd>+{points(direct.sarPoints)}</dd></div>
+                              <div><dt>主動技能效果</dt><dd>+{points(direct.activeScoreUp)}</dd></div>
                               <div><dt>主動技能時間覆蓋</dt><dd>{share(direct.activeTimeCoverage)}</dd></div>
                               {chartDetail && (
                                 <>
