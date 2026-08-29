@@ -27,7 +27,18 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
   } = state;
   // The picks live in the remembered settings, so they survive a reload and a
   // shared link can seed them.
-  const picked = prefs.manualPicks;
+  //
+  // Only the ones still owned count. A remembered pick can outlive the card:
+  // unticking it in 我的卡片 leaves the id here, and a shared link seeds
+  // whatever it carried whether or not the recipient owns it. Such a pick can
+  // be neither shown in a slot nor scored, so counting it meant a team of four
+  // reported itself full and every other card went disabled -- five could
+  // never be reached.
+  const ownedIds = useMemo(() => new Set(owned.map((card) => card.id)), [owned]);
+  const picked = useMemo(
+    () => prefs.manualPicks.filter((id) => ownedIds.has(id)),
+    [prefs.manualPicks, ownedIds],
+  );
   const leaderId = prefs.manualLeaderId;
   const setPicked = (next: string[] | ((previous: string[]) => string[])) =>
     setPrefs((previous) => ({
@@ -233,9 +244,14 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
 
   if (!bundle) return null;
 
-  const toggle = (id: string) => setPicked((previous) =>
-    previous.includes(id) ? previous.filter((value) => value !== id)
-      : previous.length < 5 ? [...previous, id] : previous);
+  // Written against the stored list rather than the filtered one, so the same
+  // click that changes a pick also drops any pick that is no longer owned
+  // instead of leaving it to sit in storage.
+  const toggle = (id: string) => setPicked((previous) => {
+    const live = previous.filter((pick) => ownedIds.has(pick));
+    return live.includes(id) ? live.filter((value) => value !== id)
+      : live.length < 5 ? [...live, id] : live;
+  });
 
   return (
     <>
