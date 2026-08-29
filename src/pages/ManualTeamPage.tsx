@@ -104,7 +104,19 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
     };
   }, [picked, leaderId, owned, unlockedLeaders, inventory]);
 
-  const teamReady = picked.length === 5 && !!leaderId;
+  // The Outfit has to still be one the player has unlocked, not merely a
+  // remembered id. Unticking its card leaves the id in the settings, and
+  // treating that as ready meant the share buttons stayed live over a team
+  // that could not be scored at all -- the card button then did nothing and
+  // the link carried an Outfit the recipient could not use either.
+  const pickedLeader = unlockedLeaders.find((row) => row.id === leaderId) ?? null;
+  const pickedLeaderCard = pickedLeader?.id.replace(/^outfit:/, '') ?? '';
+  const pickedLeaderPayload = pickedLeader
+    ? pickedLeader.outfits[String(bloomOf(pickedLeaderCard))]
+      ?? pickedLeader.outfits[String(pickedLeader.maxBloom)] ?? null
+    : null;
+
+  const teamReady = picked.length === 5 && !!pickedLeader;
 
   const chartMeta = useMemo(
     () => charts?.charts.find((row) => row.key === songKey) ?? null,
@@ -231,12 +243,6 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
     };
   };
 
-  const pickedLeader = unlockedLeaders.find((row) => row.id === leaderId) ?? null;
-  const pickedLeaderCard = pickedLeader?.id.replace(/^outfit:/, '') ?? '';
-  const pickedLeaderPayload = pickedLeader
-    ? pickedLeader.outfits[String(bloomOf(pickedLeaderCard))]
-      ?? pickedLeader.outfits[String(pickedLeader.maxBloom)] ?? null
-    : null;
   const candidates = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return owned.filter((card) => !needle || searchIndex(card).includes(needle));

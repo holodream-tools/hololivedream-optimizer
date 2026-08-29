@@ -78,6 +78,10 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
   /** Which of the ranked teams the timeline is drawing; the winner by default. */
   const [timelineTeam, setTimelineTeam] = useState(0);
   const [busy, setBusy] = useState<{ done: number; total: number } | null>(null);
+  // Set when a run is refused because the candidate pool no longer fits the
+  // inventory. Separate from the advisory notice below, which only says the
+  // inventory moved; this says a run was actually stopped.
+  const [staleRun, setStaleRun] = useState(false);
   // A run token, not a cancel flag: a shared boolean lets a new run clear the
   // old one's cancellation, and both then keep going and fight over progress.
   const runIdRef = useRef(0);
@@ -268,7 +272,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
   // A result belongs to one song at one depth; changing either invalidates it.
   useEffect(() => {
     runIdRef.current += 1;
-    setBusy(null); setRanked(null); setUplift(null); setTimelineTeam(0);
+    setBusy(null); setRanked(null); setUplift(null); setTimelineTeam(0); setStaleRun(false);
   }, [chartKey, depth, stamp]);
 
   const runSongOptimize = useCallback(async () => {
@@ -279,6 +283,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
     runIdRef.current = runId;
     setRanked(null);
     setUplift(null);
+    setStaleRun(false);
     // Rebuilt exactly as the sweep built them, so the candidate indices mean the
     // same cards they meant when the ranking was produced.
     const facts = cardFacts(owned, owned.map((card) => inventory.get(card.id)?.bloom ?? card.maxBloom));
@@ -287,6 +292,22 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
       return Math.min(row?.bloom ?? leader.maxBloom, leader.maxBloom);
     }));
     const payloadOf = (leaderIndex: number) => outfits.payloads[outfits.signatureOf[leaderIndex]];
+
+    // A candidate is a list of positions in the `owned` array as it stood when
+    // the sweep ran. Unticking a card since then renumbers that array, so an
+    // index can now point at a different card or past the end -- which is how
+    // this threw rather than reporting anything. Dropping the bad ones would
+    // be worse: the funnel would still produce a ranking, from a pool quietly
+    // missing teams, and nothing on screen would say so. The whole pool has to
+    // be rebuilt, so the run stops here and says which button does that.
+    const usable = run.candidates.every((row) =>
+      row.leaderIndex < outfits.count
+      && row.members.every((index) => index >= 0 && index < facts.length));
+    if (!usable) {
+      setStaleRun(true);
+      setBusy(null);
+      return;
+    }
 
     const candidates = distinctFormations(run.candidates).slice(0, depth);
     setPool(candidates.length);
@@ -443,11 +464,22 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                                   onClick={() => { runIdRef.current += 1; setBusy(null); }}>取消</button>
                         </div>
                       )
-                      : <button className="primary" onClick={runSongOptimize}>開始計算</button>}
+                      : (
+                        <button className="primary" onClick={runSongOptimize}
+                                disabled={run.stamp !== stamp}
+                                title={run.stamp !== stamp
+                                  ? '庫存已變更，請先重新跑一次「隊伍最佳化」' : undefined}>
+                          開始計算
+                        </button>
+                      )}
                   </div>
 
-                  {run.stamp !== stamp && (
-                    <p className="stale">庫存已變更，請先重新跑一次「隊伍最佳化」，再回來計算。</p>
+                  {(run.stamp !== stamp || staleRun) && (
+                    <p className="stale">
+                      {staleRun
+                        ? '持有卡已變更，這份候選隊伍已無法對應目前的卡片，沒有計算。請先重新跑一次「隊伍最佳化」。'
+                        : '庫存已變更，請先重新跑一次「隊伍最佳化」，再回來計算。'}
+                    </p>
                   )}
 
                   {ranked && ranked.length > 0 && (
