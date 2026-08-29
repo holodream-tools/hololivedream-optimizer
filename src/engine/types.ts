@@ -47,6 +47,12 @@ export interface CardFacts {
   total: number;
   type: string;           // already lowercased
   generation: string;
+  /**
+   * A second group this member counts as, for the handful (currently one:
+   * Shirakami Fubuki, also 1期生) the upstream schema's one-group-per-card
+   * field cannot express. See precompute.secondaryGenerationOf.
+   */
+  secondaryGeneration: string | null;
   passiveEffect: string | null;
   passiveValue: number;
   passiveTarget: unknown;

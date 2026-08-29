@@ -10,6 +10,25 @@ import type { CardBundle, CardFacts, CardJson, LeaderJson, OutfitPayload, Outfit
 /** The reference song length the chart-agnostic model averages Special over. */
 export const GENERIC_SONG_SECONDS = 192.0;
 
+/**
+ * A member counted under a second group the upstream data does not carry.
+ *
+ * `card.generation` is upstream's single `group` field, correct for display
+ * and branch filtering. Shirakami Fubuki's says GAMERS -- right for her
+ * branch -- but she is also an original 1期生 member, and her own Support
+ * Skill's "1期生 x2" condition is written assuming that: the game counts her
+ * both ways, so a team of her plus one other 1期生 member does meet it.
+ * Keyed by talent, which every one of a member's cards shares.
+ */
+const EXTRA_GENERATION: Record<string, string> = {
+  'talent:白上フブキ': '1期生',
+};
+
+/** The extra group a member's own card data does not list, if any. */
+export function secondaryGenerationOf(talent: string): string | null {
+  return EXTRA_GENERATION[talent] ?? null;
+}
+
 function num(skill: SkillJson | null, key: string): number {
   if (!skill) return 0;
   const value = skill[key];
@@ -36,6 +55,7 @@ export function cardFacts(cards: CardJson[], blooms: number[]): CardFacts[] {
       total: performance + technique + sense,
       type: card.type.toLowerCase(),
       generation: card.generation,
+      secondaryGeneration: secondaryGenerationOf(card.talent),
       passiveEffect: (passive?.effect_type as string) ?? null,
       passiveValue: num(passive, 'value'),
       passiveTarget: passive?.target ?? null,

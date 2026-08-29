@@ -9,9 +9,12 @@
  * The bundled copy still loads first and always wins on failure — a page that
  * cannot open because someone else's server is down would be a bad trade.
  *
- * Artwork is NOT refreshed this way: the thumbnail catalogue sends no CORS
- * headers, so a brand-new card appears with its numbers but without a picture
- * until the next deploy. Every card component already renders without one.
+ * The thumbnail catalogue is NOT refreshed this way either: it sends no CORS
+ * headers, so a brand-new card has no entry there until the next deploy.
+ * `ui/CardArt.tsx` covers the gap at render time -- a guess at the card's own
+ * picture on the same host, then the member's portrait, which resolves from
+ * the card id alone -- and every card component still renders without any of
+ * them, for the rare member neither covers.
  */
 import type { BloomJson, CardBundle, CardJson, LeaderJson, OutfitPayload } from '../engine/types';
 

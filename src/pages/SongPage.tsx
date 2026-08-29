@@ -13,6 +13,7 @@ import {
   FUNNEL_DEPTHS, distinctFormations, rankSongResults, scoreCandidates, upliftOverGenericBest,
 } from '../engine/songOptimize';
 import { SongTimeline } from '../ui/SongTimeline';
+import { CardArt } from '../ui/CardArt';
 import { ShareCardButton } from '../ui/ShareCardButton';
 import { DIFFICULTIES, attributeStyle, difficultyStyle, duration } from '../ui/theme';
 import type { AppState } from '../lib/appState';
@@ -479,9 +480,8 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                           return (
                             <li key={slot} style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}>
                               <span className="order-slot">特殊技能 {slot + 1}</span>
-                              {images?.url(card.id)
-                                ? <img src={images.url(card.id)} alt="" width={192} height={108} />
-                                : <span className="slot-noart">{style.label}</span>}
+                              <CardArt images={images} cardId={card.id} width={192} height={108}
+                                       noArtClassName="slot-noart" noArtLabel={style.label} />
                               <span className="order-name">{memberName(card)}</span>
                             </li>
                           );
@@ -593,9 +593,8 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                       return (
                         <li key={slot} style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}>
                           <span className="order-slot">特殊技能 {slot + 1}</span>
-                          {images?.url(card.id)
-                            ? <img src={images.url(card.id)} alt="" width={192} height={108} />
-                            : <span className="slot-noart">{style.label}</span>}
+                          <CardArt images={images} cardId={card.id} width={192} height={108}
+                                   noArtClassName="slot-noart" noArtLabel={style.label} />
                           <span className="order-name">{memberName(card)}</span>
                           <span className="order-time">{outcome.prepared.specialTimes[slot].toFixed(1)}s</span>
                         </li>

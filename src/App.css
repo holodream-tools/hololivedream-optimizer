@@ -894,4 +894,10 @@ button:disabled { opacity: .45; cursor: default; }
 .conds-text { color: var(--ink-3); min-width: 0; }
 .conds-reason { color: var(--happy); font-weight: 650; min-width: 0; }
 button.danger { color: var(--happy); border-color: var(--happy-line); }
+
+/* ---- manual team: song evaluation ---- */
+.song-eval { margin: 0 0 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.song-eval h4 { display: flex; gap: 9px; align-items: baseline; flex-wrap: wrap;
+                margin: 0 0 10px; font-size: 13px; font-weight: 700; }
+.song-eval h4 span { font-size: 11.5px; font-weight: 400; color: var(--ink-3); }
 button.danger:hover { background: var(--happy-soft); }

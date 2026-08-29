@@ -126,6 +126,9 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
     totals[i] = f.total; supports[i] = 0;
     typeCounts.set(f.type, (typeCounts.get(f.type) ?? 0) + 1);
     generationCounts.set(f.generation, (generationCounts.get(f.generation) ?? 0) + 1);
+    if (f.secondaryGeneration) {
+      generationCounts.set(f.secondaryGeneration, (generationCounts.get(f.secondaryGeneration) ?? 0) + 1);
+    }
   }
 
   // Owner order comes from the base totals, exactly as the reference does.
@@ -155,7 +158,9 @@ export function memberPart(facts: CardFacts[], indices: ArrayLike<number>, state
         for (let i = 0; i < count; i++) if (rows[i].type === wanted) eligible[eligibleCount++] = i;
       } else if ('group' in target && target.group !== undefined) {
         const wanted = target.group;
-        for (let i = 0; i < count; i++) if (rows[i].generation === wanted) eligible[eligibleCount++] = i;
+        for (let i = 0; i < count; i++) {
+          if (rows[i].generation === wanted || rows[i].secondaryGeneration === wanted) eligible[eligibleCount++] = i;
+        }
       }
       // Recipients rank on BASE parameters: on the parameter the effect raises
       // for a single-stat effect, on the base total otherwise. Nothing an

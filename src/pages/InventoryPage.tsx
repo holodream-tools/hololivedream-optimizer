@@ -138,7 +138,7 @@ export function InventoryPage({ state }: { state: AppState }) {
             <CardTile
               key={card.id} card={card} density={density}
               owned={!!row.owned} bloom={row.bloom} leaderUnlocked={!!row.leader_unlocked}
-              imageUrl={images?.url(card.id)} portraitUrl={images?.portrait(card.id)}
+              images={images} portraitUrl={images?.portrait(card.id)}
               onToggleOwned={() => state.patch(card.id, row.owned ? { owned: 0, leader_unlocked: 0 } : { owned: 1 })}
               onBloom={(bloom) => state.patch(card.id, { bloom })}
               onToggleLeader={() => state.patch(card.id, { leader_unlocked: row.leader_unlocked ? 0 : 1 })}

@@ -38,7 +38,6 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
   // reads the first KEPT rows, unchanged.
   const CANDIDATE_POOL = 6000;
   const abortRef = useRef<AbortController | null>(null);
-  const imageUrl = (cardId: string) => images?.url(cardId);
 
   // Four is the useful maximum: pinning all five leaves nothing to search for.
   const MAX_PINNED = 4;
@@ -144,7 +143,7 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
       </section>
 
       <PinPicker
-        owned={owned} pinned={pinned} max={MAX_PINNED} imageUrl={(card) => imageUrl(card.id)}
+        owned={owned} pinned={pinned} max={MAX_PINNED} images={images}
         onToggle={(cardId) => setPinned((previous) => previous.includes(cardId)
           ? previous.filter((value) => value !== cardId)
           : previous.length < MAX_PINNED ? [...previous, cardId] : previous)}
@@ -211,7 +210,7 @@ export function OptimizerPage({ state, onOpenSong, onCompare }: {
           <div className="results-list">
             {shown.map((row) => (
               <TeamRow key={row.rank} rank={row.rank} value={row.value} members={row.members}
-                       leader={row.leader} imageUrl={imageUrl} best={run.rows[0]?.value ?? 0}
+                       leader={row.leader} images={images} best={run.rows[0]?.value ?? 0}
                        breakdown={row.breakdown} bloomOf={bloomOf}
                        onOpenSong={() => onOpenSong(row.rank - 1)}
                        compareLabel={compare[0] === null ? '→ A' : compare[1] === null ? '→ B' : '→ A'}

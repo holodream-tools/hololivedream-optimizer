@@ -66,8 +66,6 @@ export type DataOrigin = 'bundled' | 'upstream';
 export interface AppState {
   bundle: CardBundle | null;
   origin: DataOrigin;
-  /** Card ids the live refresh added on top of the bundled snapshot. */
-  newCards: string[];
   images: ImageSource | null;
   charts: ChartBundle | null;
   chartBlob: ArrayBuffer | null;
@@ -112,7 +110,6 @@ export interface AppState {
 export function useAppState(): AppState {
   const [bundle, setBundle] = useState<CardBundle | null>(null);
   const [origin, setOrigin] = useState<DataOrigin>('bundled');
-  const [newCards, setNewCards] = useState<string[]>([]);
   const [images, setImages] = useState<ImageSource | null>(null);
   const [charts, setCharts] = useState<ChartBundle | null>(null);
   const [chartBlob, setChartBlob] = useState<ArrayBuffer | null>(null);
@@ -147,7 +144,6 @@ export function useAppState(): AppState {
         indexMembers(fresh.bundle);
         setBundle(fresh.bundle);
         setOrigin('upstream');
-        setNewCards(fresh.added);
         // Re-seed so cards that only exist upstream get an inventory row.
         setInventory((previous) => {
           const merged = load(fresh.bundle);
@@ -375,7 +371,7 @@ export function useAppState(): AppState {
   );
 
   return {
-    bundle, origin, newCards, images, charts, chartBlob, loadCharts, chartsLoading, error,
+    bundle, origin, images, charts, chartBlob, loadCharts, chartsLoading, error,
     inventory, stamp, owned, unlockedLeaders, bloomOf,
     patch, bulk, replaceInventory, exportInventory, importInventory,
     run, setRun,

@@ -2,7 +2,9 @@
 import { useState } from 'react';
 import { attributeStyle } from './theme';
 import { PassiveConditions } from './PassiveConditions';
+import { CardArt } from './CardArt';
 import type { CardJson, LeaderJson } from '../engine/types';
+import type { ImageSource } from '../lib/images';
 import { leaderName, memberName } from './members';
 
 /** How the index was assembled, so the number is not just asserted. */
@@ -20,8 +22,7 @@ export interface TeamRowProps {
   value: number;
   members: CardJson[];
   leader: LeaderJson;
-  /** Card artwork by id, so the Leader Outfit resolves even when it is not a member. */
-  imageUrl: (cardId: string) => string | undefined;
+  images: ImageSource | null | undefined;
   /** Score of the best team, for the relative bar. */
   best: number;
   /** Opens this team on the song page, when the caller supports it. */
@@ -41,7 +42,7 @@ function splitLeaderName(value: string): [string, string] {
   return [value.slice(0, open), value.slice(open + 1).replace(/）$/, '')];
 }
 
-export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSong,
+export function TeamRow({ rank, value, members, leader, images, best, onOpenSong,
                          onCompare, compareLabel, bloomOf, breakdown }: TeamRowProps) {
   const [open, setOpen] = useState(false);
   const share = best > 0 ? value / best : 0;
@@ -85,9 +86,8 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
       <ol className="team-members">
         <li className="is-leader">
           <span className="leader-crest">隊長</span>
-          {imageUrl(leaderCardId)
-            ? <img src={imageUrl(leaderCardId)} alt="" loading="lazy" width={192} height={108} />
-            : <span className="team-noart">隊長服裝</span>}
+          <CardArt images={images} cardId={leaderCardId} width={192} height={108}
+                   noArtClassName="team-noart" noArtLabel="隊長服裝" />
           <span className="team-member-name">{leaderTalent}</span>
           <span className="team-member-title">{leaderCostume || '—'}</span>
           <span className="leader-role">{leaderAlsoPlays ? '服裝＋上場' : '僅提供服裝'}</span>
@@ -95,13 +95,11 @@ export function TeamRow({ rank, value, members, leader, imageUrl, best, onOpenSo
 
         {members.map((card, slot) => {
           const style = attributeStyle(card.type);
-          const url = imageUrl(card.id);
           return (
             <li key={`${card.id}-${slot}`}
                 style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}>
-              {url
-                ? <img src={url} alt="" loading="lazy" width={192} height={108} />
-                : <span className="team-noart">{style.label}</span>}
+              <CardArt images={images} cardId={card.id} width={192} height={108}
+                       noArtClassName="team-noart" noArtLabel={style.label} />
               <span className="team-member-name">{memberName(card)}</span>
               <span className="team-member-title">{card.title || '—'}</span>
             </li>

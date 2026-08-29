@@ -13,6 +13,7 @@ import { attributeChart, attributeGeneric } from '../engine/attribution';
 import { materialize, prepare } from '../engine/chartScore';
 import { cardFacts, outfitTable } from '../engine/precompute';
 import { attributeStyle } from '../ui/theme';
+import { CardArt } from '../ui/CardArt';
 import type { AppState, ComparePick } from '../lib/appState';
 import type { BestOrder, GenericView } from '../engine/compare';
 import type { AttributionReport, AttributionRow } from '../engine/attribution';
@@ -211,13 +212,11 @@ export function ComparePage({ state }: { state: AppState }) {
                   </li>
                   {side.pick.members.map((card) => {
                     const style = attributeStyle(card.type);
-                    const url = images?.url(card.id);
                     return (
                       <li key={card.id}
                           style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}>
-                        {url
-                          ? <img src={url} alt="" loading="lazy" width={192} height={108} />
-                          : <span className="cmp-noart">{style.label}</span>}
+                        <CardArt images={images} cardId={card.id} width={192} height={108}
+                                 noArtClassName="cmp-noart" noArtLabel={style.label} />
                         <span className="cmp-name">{memberName(card)}</span>
                         <span className="cmp-title">{card.title || '—'}</span>
                       </li>

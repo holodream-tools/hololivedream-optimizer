@@ -7,19 +7,21 @@
  */
 import { useMemo, useState } from 'react';
 import { attributeStyle } from './theme';
+import { CardArt } from './CardArt';
 import type { CardJson } from '../engine/types';
+import type { ImageSource } from '../lib/images';
 import { memberName, searchIndex } from './members';
 
 export interface PinPickerProps {
   owned: CardJson[];
   pinned: string[];
   max: number;
-  imageUrl: (card: CardJson) => string | undefined;
+  images: ImageSource | null | undefined;
   onToggle: (cardId: string) => void;
   onClear: () => void;
 }
 
-export function PinPicker({ owned, pinned, max, imageUrl, onToggle, onClear }: PinPickerProps) {
+export function PinPicker({ owned, pinned, max, images, onToggle, onClear }: PinPickerProps) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
 
@@ -51,11 +53,10 @@ export function PinPicker({ owned, pinned, max, imageUrl, onToggle, onClear }: P
         <ul className="pin-list">
           {pinnedCards.map((card) => {
             const style = attributeStyle(card.type);
-            const url = imageUrl(card);
             return (
               <li key={card.id} style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}>
-                {url ? <img src={url} alt="" width={192} height={108} />
-                     : <span className="slot-noart">{style.label}</span>}
+                <CardArt images={images} cardId={card.id} width={192} height={108}
+                         noArtClassName="slot-noart" noArtLabel={style.label} />
                 <span className="pin-name">{memberName(card)}</span>
                 <button className="pin-remove" onClick={() => onToggle(card.id)}
                         aria-label={`取消指定 ${memberName(card)}`}>×</button>
@@ -73,15 +74,14 @@ export function PinPicker({ owned, pinned, max, imageUrl, onToggle, onClear }: P
             {candidates.map((card) => {
               const style = attributeStyle(card.type);
               const chosen = pinned.includes(card.id);
-              const url = imageUrl(card);
               return (
                 <button key={card.id} className={`pin-option${chosen ? ' is-on' : ''}`}
                         style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line, ['--accent-soft' as string]: style.soft }}
                         disabled={!chosen && pinned.length >= max}
                         onClick={() => onToggle(card.id)}
                         title={`${memberName(card)}${card.title ? `「${card.title}」` : ''}`}>
-                  {url ? <img src={url} alt="" width={192} height={108} />
-                       : <span className="slot-noart">{style.label}</span>}
+                  <CardArt images={images} cardId={card.id} width={192} height={108}
+                           noArtClassName="slot-noart" noArtLabel={style.label} />
                   <span className="pin-option-name">{memberName(card)}</span>
                 </button>
               );

@@ -1,0 +1,111 @@
+name: Sync card artwork URLs
+
+# Card DATA hot-reloads in the browser; card ART could not, because the only
+# catalogue that has it sends no CORS headers. This job is the other half:
+# it runs where fetching is allowed, resolves each card's real picture, and
+# commits the mapping the site reads at runtime.
+#
+# Without it a newly released card shows its member's portrait instead of its
+# own artwork until someone runs tools/export_images.py by hand against the
+# desktop app's cache -- and a costume variant would stay that way, since its
+# filename cannot be derived from the card id.
+#
+# Nothing is copied here: the mapping holds URLs, and the pictures stay where
+# they are published, exactly as the bundled manifest already does.
+
+on:
+  schedule:
+    # Daily, 03:30 UTC -- half an hour after the divisor sync, so on the day
+    # that one also runs the two never race for the same branch. A run with
+    # nothing new to map costs two requests and commits nothing, which is
+    # cheap enough to ask every day rather than make a new card wait a week.
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+    inputs:
+      full:
+        description: 'Re-resolve every card (off = only cards with no entry)'
+        type: boolean
+        default: false
+      apply:
+        description: 'Commit the change (off = report only)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: sync-remote-images
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Resolve card artwork
+        id: sync
+        run: |
+          python3 tools/export_remote_images.py --apply \
+            ${{ inputs.full && '--full' || '' }} | tee sync.log
+          if git diff --quiet -- public/data/remote-images.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # This file feeds no arithmetic -- a wrong URL shows the wrong picture,
+      # it cannot move a score -- but the build must still accept the shape,
+      # and a card component that cannot render it is worth catching here.
+      - uses: actions/setup-node@v4
+        if: steps.sync.outputs.changed == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - if: steps.sync.outputs.changed == 'true'
+        run: npm ci
+
+      - name: Verify the site still builds and its tests pass
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          npm test
+          npm run build
+
+      - name: Commit
+        if: steps.sync.outputs.changed == 'true' && inputs.apply != false
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add public/data/remote-images.json
+          git commit -F - <<'EOF'
+          Refresh the card artwork mapping from horodori.com
+
+          Automated: .github/workflows/sync-remote-images.yml. Only
+          remote-images.json is touched, and it holds URLs rather than
+          pictures. The site's tests and build ran against it before this
+          commit.
+          EOF
+          git push
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### Card artwork sync'
+            echo
+            if [ "${{ steps.sync.outputs.changed }}" = 'true' ]; then
+              echo 'The mapping changed. Details:'
+            else
+              echo 'No change; every card already points at the right picture.'
+            fi
+            echo
+            echo '```'
+            cat sync.log 2>/dev/null || echo '(the resolve step failed before writing a log)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

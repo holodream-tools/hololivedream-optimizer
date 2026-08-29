@@ -11,6 +11,7 @@
  * about something the score treated as off.
  */
 import { conditionMet } from '../engine/overallScore';
+import { secondaryGenerationOf } from '../engine/precompute';
 import { passiveText, outfitText } from './skillText';
 import type { CardJson, LeaderJson, OutfitCondition } from '../engine/types';
 import { branchLabel, leaderName, memberName } from './members';
@@ -56,6 +57,8 @@ export function PassiveConditions({ members, leader, bloomOf }: PassiveCondition
     const type = card.type.toLowerCase();
     typeCounts.set(type, (typeCounts.get(type) ?? 0) + 1);
     generationCounts.set(card.generation, (generationCounts.get(card.generation) ?? 0) + 1);
+    const extra = secondaryGenerationOf(card.talent);
+    if (extra) generationCounts.set(extra, (generationCounts.get(extra) ?? 0) + 1);
   }
 
   const rows: Row[] = [];

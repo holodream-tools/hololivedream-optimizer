@@ -106,15 +106,6 @@ export default function App() {
         </p>
         <FirstRunHint state={state} />
         {state.error && <p className="error">{state.error}</p>}
-        {state.newCards.length > 0 && (
-          <p className="fresh">
-            已載入 {state.newCards.length} 張新卡：
-            {state.newCards
-              .map((id) => state.bundle!.cards.find((card) => card.id === id)?.name ?? id)
-              .join('、')}
-            。數值與技能已可使用，卡片圖片會在下次更新時補上。
-          </p>
-        )}
         {tab === 'inventory' && <InventoryPage state={state} />}
         {tab === 'library' && <LibraryPage state={state} />}
         {tab === 'optimizer' && (

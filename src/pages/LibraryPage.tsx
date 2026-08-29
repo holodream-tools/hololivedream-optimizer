@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import { activeText, outfitText, passiveText, specialText } from '../ui/skillText';
 import { ATTRIBUTES, attributeStyle } from '../ui/theme';
+import { CardArt } from '../ui/CardArt';
 import type { AppState } from '../lib/appState';
 import type { CardBundle, CardJson } from '../engine/types';
 import { branchLabel, compareCards, memberName, searchIndex, sortedGenerations } from '../ui/members';
@@ -111,9 +112,8 @@ function CardDetail({ card: selected, bundle, images, bloom, setBloom }: {
 
   return (
         <article className="detail" style={{ ['--accent' as string]: style.accent, ['--accent-soft' as string]: style.soft, ['--accent-line' as string]: style.line }}>
-          {images?.url(selected.id)
-            ? <img className="detail-art" src={images.url(selected.id)} alt="" width={192} height={108} />
-            : <div className="detail-noart">{style.label}</div>}
+          <CardArt images={images} cardId={selected.id} width={192} height={108}
+                   className="detail-art" noArtClassName="detail-noart" noArtLabel={style.label} />
 
           <header className="detail-head">
             <p className="detail-badge">{style.label} · {branchLabel(selected.generation)}</p>

@@ -6,12 +6,14 @@
  *   normal   card art and the headline numbers
  *   skills   normal plus what the three skills actually do
  *
- * Every artwork slot is optional: `imageUrl` and `portraitUrl` may be undefined
+ * Every artwork slot is optional: `images` and `portraitUrl` may be undefined
  * and the tile falls back to a typographic panel carrying the same information.
  */
 import { activeText, passiveText, specialText } from './skillText';
 import { attributeStyle } from './theme';
+import { CardArt } from './CardArt';
 import type { CardJson } from '../engine/types';
+import type { ImageSource } from '../lib/images';
 import { memberName } from './members';
 import { branchLabel } from './members';
 
@@ -23,7 +25,7 @@ export interface CardTileProps {
   bloom: number;
   leaderUnlocked: boolean;
   density: TileDensity;
-  imageUrl?: string;
+  images?: ImageSource | null;
   portraitUrl?: string;
   onToggleOwned: () => void;
   onBloom: (bloom: number) => void;
@@ -31,7 +33,7 @@ export interface CardTileProps {
 }
 
 export function CardTile(props: CardTileProps) {
-  const { card, owned, bloom, leaderUnlocked, density, imageUrl, portraitUrl } = props;
+  const { card, owned, bloom, leaderUnlocked, density, images, portraitUrl } = props;
   const style = attributeStyle(card.type);
   const blooms = Object.keys(card.blooms).map(Number).sort((a, b) => a - b);
   const stats = card.blooms[String(bloom)] ?? card.blooms[String(card.maxBloom)];
@@ -86,9 +88,8 @@ export function CardTile(props: CardTileProps) {
       <button type="button" className="tile-art" aria-pressed={owned}
               aria-label={`${owned ? '取消持有' : '設為持有'}：${memberName(card)}${card.title ? `「${card.title}」` : ''}`}
               onClick={props.onToggleOwned}>
-        {imageUrl
-          ? <img src={imageUrl} alt="" loading="lazy" width={192} height={108} />
-          : <span className="tile-noart">{style.label}</span>}
+        <CardArt images={images} cardId={card.id} width={192} height={108}
+                 noArtClassName="tile-noart" noArtLabel={style.label} />
         <span className="tile-badge">{style.label}</span>
         {owned && <span className="tile-check" aria-hidden="true">✓</span>}
       </button>

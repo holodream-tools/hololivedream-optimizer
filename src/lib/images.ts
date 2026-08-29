@@ -1,16 +1,36 @@
 /**
- * Card artwork, in two sizes with different lifetimes.
+ * Card artwork, in four tiers with different lifetimes.
  *
- *   art      192x108 card thumbnails, shipped with the build. One per CARD, so
- *            a newly released card has none until the next deploy.
+ *   art      192x108 card thumbnails, shipped with the build. One per CARD,
+ *            written from the desktop app's local cache, so a newly released
+ *            card has none until someone runs tools/export_images.py again.
+ *   remote   every card's real artwork URL, resolved in CI by
+ *            tools/export_remote_images.py and refreshed on a schedule. Also
+ *            one per CARD, but it does not need the desktop cache, so a card
+ *            released since the last deploy is normally already in here --
+ *            costume and event variants included, which no rule over the card
+ *            id can derive.
+ *   guessed  a last attempt at the card's own picture, derived from the id's
+ *            naming convention. Only right for a base card, and only useful
+ *            in the window between a release and the next mapping refresh.
  *   portrait ~6 KB member portraits, hot-linked from the official CDN. One per
- *            MEMBER, so a new card of an existing member resolves immediately.
+ *            MEMBER, so any card of a known member resolves immediately.
  *
- * Both are optional everywhere. Components fall back to a typographic panel, so
- * the whole artwork layer can be switched off or repointed in one place.
+ * All four are optional everywhere. Components fall back to a typographic
+ * panel, so the whole artwork layer can be switched off or repointed in one
+ * place. `ui/CardArt.tsx` is what walks them in order at render time, moving
+ * to the next only when the browser reports the current one failed to load --
+ * a card cannot be shown a picture that does not exist, and a card of a known
+ * member is never shown nothing.
  */
 export interface ArtManifest {
   cards: Record<string, { file: string; width: number; height: number; sourceUrl: string }>;
+}
+
+export interface RemoteArtManifest {
+  source?: string;
+  generated?: string;
+  cards: Record<string, string>;
 }
 
 export interface PortraitManifest {
@@ -25,16 +45,30 @@ function talentSlug(cardId: string): string {
   return withoutRarity.replace('_swim', '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+/**
+ * Where horodori.com files its card pictures.
+ *
+ * The site's catalogue sends no CORS headers -- readable in a browser tab,
+ * not fetchable from one -- so the browser cannot look a card up there. That
+ * is exactly why the mapping is resolved in CI instead, where fetching is
+ * allowed, and shipped as `remote-images.json`. This constant is only for
+ * `guessedArtUrl`, the tier that runs when even the mapping has not caught up.
+ */
+const HORODORI_ART_BASE = 'https://www.horodori.com/images/cards/medium/';
+
 export class ImageSource {
   private art: ArtManifest['cards'];
+  private remote: RemoteArtManifest['cards'];
   private portraits: PortraitManifest | null;
   private base: string;
   private localArt: boolean;
   readonly enabled: boolean;
 
-  constructor(art: ArtManifest | null, portraits: PortraitManifest | null, base: string,
+  constructor(art: ArtManifest | null, remote: RemoteArtManifest | null,
+              portraits: PortraitManifest | null, base: string,
               enabled = true, localArt = false) {
     this.art = art?.cards ?? {};
+    this.remote = remote?.cards ?? {};
     this.portraits = portraits;
     this.base = base;
     this.enabled = enabled;
@@ -53,6 +87,19 @@ export class ImageSource {
     const entry = this.art[cardId];
     if (!entry) return undefined;
     return this.localArt ? `${this.base}cards/${entry.file}` : entry.sourceUrl;
+  }
+
+  /**
+   * This card's real artwork, from the mapping CI keeps up to date.
+   *
+   * Keyed by card id like `url` is, but sourced without needing the desktop
+   * app's local cache, so it normally already covers a card the live upstream
+   * refresh has only just introduced -- including the costume variants
+   * `guessedArtUrl` cannot derive.
+   */
+  remoteUrl(cardId: string): string | undefined {
+    if (!this.enabled) return undefined;
+    return this.remote[cardId];
   }
 
   /**
@@ -92,8 +139,28 @@ export class ImageSource {
     return this.art[cardId]?.sourceUrl;
   }
 
+  /**
+   * A last guess at this card's picture, from the card id alone.
+   *
+   * horodori.com names a base card's file after the id verbatim: underscores
+   * to hyphens, `star.webp` appended (`shirakami_fubuki_5` ->
+   * `shirakami-fubuki-5star.webp`). Measured against the 70 cards the mapping
+   * now resolves properly, that rule is right for 52 and wrong for 18 -- every
+   * costume and event variant, filed under an edited theme name instead
+   * (`shirakami_fubuki_swim_5` is really `shirakami-fubuki-nagisa-twinkle-
+   * 5star.webp`), which nothing derivable from the id can reach.
+   *
+   * So this is a backstop, not the plan: `remoteUrl` is what actually answers
+   * this question, and the only window where a guess helps at all is between a
+   * card's release and the next mapping refresh. Always returns a URL; whether
+   * it is right is found out by trying it, exactly like a stale link.
+   */
+  guessedArtUrl(cardId: string): string {
+    return `${HORODORI_ART_BASE}${cardId.replace(/_/g, '-')}star.webp`;
+  }
+
   static async load(base: string, enabled = true, localArt = false): Promise<ImageSource> {
-    if (!enabled) return new ImageSource(null, null, base, false, localArt);
+    if (!enabled) return new ImageSource(null, null, null, base, false, localArt);
     const read = async <T>(name: string): Promise<T | null> => {
       try {
         const response = await fetch(`${base}data/${name}`);
@@ -102,10 +169,12 @@ export class ImageSource {
         return null;   // A missing manifest just means that layer is off.
       }
     };
-    const [art, portraits] = await Promise.all([
+    const [art, remote, portraits] = await Promise.all([
       read<ArtManifest>('images.json'),
+      read<RemoteArtManifest>('remote-images.json'),
       read<PortraitManifest>('portraits.json'),
     ]);
-    return new ImageSource(art, portraits, base, !!(art || portraits), localArt);
+    return new ImageSource(art, remote, portraits, base,
+                           !!(art || remote || portraits), localArt);
   }
 }

@@ -4,19 +4,25 @@ import { cardFacts, outfitTable } from '../engine/precompute';
 import {
   expectedIndexOf, leaderPowerAndSupport, makeMemberState, memberPart, memberStatTotals,
 } from '../engine/overallScore';
+import { bestOrder } from '../engine/compare';
+import { materialize, prepare } from '../engine/chartScore';
 import { attributeStyle } from '../ui/theme';
 import { outfitText } from '../ui/skillText';
 import { PassiveConditions } from '../ui/PassiveConditions';
+import { CardArt } from '../ui/CardArt';
+import { SongTimeline } from '../ui/SongTimeline';
 import { shareUrl } from '../lib/share';
 import { ShareCardButton } from '../ui/ShareCardButton';
 import type { ShareCardData } from '../lib/shareCard';
 import type { AppState } from '../lib/appState';
+import type { PreparedChart } from '../engine/chartScore';
 import { memberName, leaderName, searchIndex } from '../ui/members';
 
 export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompare: () => void }) {
   const {
     bundle, images, owned, unlockedLeaders, inventory, compare, pushCompare,
-    prefs, setPrefs, bloomOf, songKey, shared, dismissShared,
+    prefs, setPrefs, bloomOf, songKey, setSongKey, shared, dismissShared,
+    charts, chartBlob, chartsLoading, loadCharts,
   } = state;
   // The picks live in the remembered settings, so they survive a reload and a
   // shared link can seed them.
@@ -85,6 +91,41 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
   }, [picked, leaderId, owned, unlockedLeaders, inventory]);
 
   const teamReady = picked.length === 5 && !!leaderId;
+
+  const chartMeta = useMemo(
+    () => charts?.charts.find((row) => row.key === songKey) ?? null,
+    [charts, songKey],
+  );
+  const chartPrepared = useMemo<PreparedChart | null>(() => {
+    const located = songKey ? charts?.index[songKey] : undefined;
+    if (!chartMeta || !located || !chartBlob) return null;
+    const [offset, count] = located;
+    return prepare(chartMeta, materialize(chartBlob, offset, count));
+  }, [chartMeta, charts, chartBlob, songKey]);
+
+  /**
+   * This fixed team's performance on the chosen chart -- the same `bestOrder`
+   * search 歌曲／順序's "指定隊伍" mode calls, over the same five members and
+   * Leader Outfit `evaluation` already resolved. Choosing a song only looks
+   * for the best standing ORDER for these five; it never changes who is on
+   * the team.
+   */
+  const songOutcome = useMemo(() => {
+    if (!evaluation || evaluation.duplicate || !chartMeta || !chartPrepared) return null;
+    const { members, leader } = evaluation;
+    const facts = cardFacts(members, members.map((card) => bloomOf(card.id)));
+    const leaderBloom = Math.min(bloomOf(leader.id.replace(/^outfit:/, '')), leader.maxBloom);
+    const outfits = outfitTable([leader], [leaderBloom]);
+    const payload = outfits.payloads[outfits.signatureOf[0]];
+    const best = bestOrder(facts, [0, 1, 2, 3, 4], payload, chartPrepared);
+    const figures = [
+      { label: '加成後總合力', value: best.detail.totalPower.toLocaleString() },
+      { label: 'PERFECT 基礎分', value: best.detail.perfectNoteScore.toLocaleString() },
+      { label: '譜面除數', value: best.detail.scoreRatio.toFixed(2) },
+      { label: '主動技能實際貢獻', value: `+${best.detail.activeBonus.toFixed(1)}%` },
+    ];
+    return { meta: chartMeta, prepared: chartPrepared, best, figures };
+  }, [evaluation, chartMeta, chartPrepared, bloomOf]);
 
   /**
    * The link, from the same builder the page has always used.
@@ -182,8 +223,6 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
     ? pickedLeader.outfits[String(bloomOf(pickedLeaderCard))]
       ?? pickedLeader.outfits[String(pickedLeader.maxBloom)] ?? null
     : null;
-  const pickedLeaderArt = pickedLeaderCard ? images?.url(pickedLeaderCard) : undefined;
-
   const candidates = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return owned.filter((card) => !needle || searchIndex(card).includes(needle));
@@ -238,8 +277,9 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
         </div>
         <div className="leader-art">
           <span className="leader-chip">隊長服裝</span>
-          {pickedLeaderArt
-            ? <img src={pickedLeaderArt} alt="" width={192} height={108} />
+          {pickedLeaderCard
+            ? <CardArt images={images} cardId={pickedLeaderCard} width={192} height={108}
+                       noArtClassName="leader-noart" noArtLabel="未選擇" />
             : <span className="leader-noart">未選擇</span>}
         </div>
       </section>
@@ -254,9 +294,8 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
           return (
             <button key={slot} className="slot" style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}
                     onClick={() => toggle(card.id)} title="移除">
-              {images?.url(card.id)
-                ? <img src={images.url(card.id)} alt="" width={192} height={108} />
-                : <span className="slot-noart">{style.label}</span>}
+              <CardArt images={images} cardId={card.id} width={192} height={108}
+                       noArtClassName="slot-noart" noArtLabel={style.label} />
               <span className="slot-name">{memberName(card)}</span>
               <span className="slot-title">{card.title || '—'}</span>
             </button>
@@ -329,6 +368,87 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
         <PassiveConditions members={evaluation.members} leader={evaluation.leader} bloomOf={bloomOf} />
       )}
 
+      {/* Extra, on top of the general 綜合推薦指數 above -- this never changes
+          who the five picks are, only which station they stand at for the
+          chosen song. */}
+      {evaluation && !evaluation.duplicate && (
+        <section className="song-eval">
+          <h4>
+            指定歌曲評估
+            <span>固定這五人，只找最佳站位；不會因為選歌而換人</span>
+          </h4>
+          {charts ? (
+            <div className="filters">
+              <select value={songKey} onChange={(event) => setSongKey(event.target.value)}>
+                <option value="">不指定（只看上面的綜合推薦指數）</option>
+                {charts.charts.map((row) => (
+                  <option key={row.key} value={row.key}>
+                    {row.title} · {row.difficulty} Lv.{row.difficultyLevel}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <button className="ghost" onClick={loadCharts} disabled={chartsLoading}>
+              {chartsLoading ? '正在載入譜面資料…' : '載入譜面，評估這支隊伍在指定歌曲的表現'}
+            </button>
+          )}
+
+          {songOutcome && (
+            <>
+              <div className="song-score">
+                <p className="breakdown-label"
+                   title="依實際歌曲譜面、Combo、特殊技能、主動技能、技能發動率加成（SAR）等時間點計算。">
+                  {songOutcome.meta.title} · 指定歌曲理論預估分（Perfect 假設）
+                </p>
+                <b>{songOutcome.best.score.toLocaleString()}</b>
+                <p className="song-delta">
+                  最佳站位 · 最差站位 {songOutcome.best.worst.toLocaleString()}
+                  （相差 {(songOutcome.best.score - songOutcome.best.worst).toLocaleString()}）
+                </p>
+              </div>
+
+              <ol className="order-line">
+                {songOutcome.best.order.map((memberIndex, slot) => {
+                  const card = evaluation.members[memberIndex];
+                  const style = attributeStyle(card.type);
+                  return (
+                    <li key={slot} style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line }}>
+                      <span className="order-slot">特殊技能 {slot + 1}</span>
+                      <CardArt images={images} cardId={card.id} width={192} height={108}
+                               noArtClassName="slot-noart" noArtLabel={style.label} />
+                      <span className="order-name">{memberName(card)}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+
+              <dl className="breakdown-parts">
+                {songOutcome.figures.map((row) => (
+                  <div key={row.label}><dt>{row.label}</dt><dd>{row.value}</dd></div>
+                ))}
+              </dl>
+              <p className="song-source">除數來源：{songOutcome.best.detail.ratioSource}</p>
+              <p className="metric-note">
+                這個數字依實際歌曲譜面、Combo、特殊技能、主動技能、技能發動率加成（SAR）等時間點逐音符計算，與上面的綜合推薦指數量綱不同，兩者不能互相比較。
+              </p>
+
+              <section className="timeline-block">
+                <h4>
+                  時間軸分析
+                  <span>{songOutcome.best.score.toLocaleString()} 分 · 最佳站位</span>
+                </h4>
+                <SongTimeline
+                  prepared={songOutcome.prepared}
+                  detail={songOutcome.best.detail}
+                  members={songOutcome.best.order.map((memberIndex) => evaluation.members[memberIndex])}
+                />
+              </section>
+            </>
+          )}
+        </section>
+      )}
+
       <div className="grid is-compact">
         {candidates.map((card) => {
           const style = attributeStyle(card.type);
@@ -337,9 +457,8 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
             <button key={card.id} className={`pick${chosen ? ' is-on' : ''}`}
                     style={{ ['--accent' as string]: style.accent, ['--accent-line' as string]: style.line, ['--accent-soft' as string]: style.soft }}
                     onClick={() => toggle(card.id)} disabled={!chosen && picked.length >= 5}>
-              {images?.url(card.id)
-                ? <img src={images.url(card.id)} alt="" width={192} height={108} />
-                : <span className="slot-noart">{style.label}</span>}
+              <CardArt images={images} cardId={card.id} width={192} height={108}
+                       noArtClassName="slot-noart" noArtLabel={style.label} />
               <span className="pick-name">{memberName(card)}</span>
               <span className="pick-title">{card.title || '—'}</span>
             </button>
