@@ -11,6 +11,7 @@ import { outfitText } from '../ui/skillText';
 import { PassiveConditions } from '../ui/PassiveConditions';
 import { CardArt } from '../ui/CardArt';
 import { SongTimeline } from '../ui/SongTimeline';
+import { ProvisionalChartNotice, ProvisionalTag } from '../ui/ProvisionalChartNotice';
 import { shareUrl } from '../lib/share';
 import { ShareCardButton } from '../ui/ShareCardButton';
 import type { ShareCardData } from '../lib/shareCard';
@@ -401,7 +402,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
               <div className="song-score">
                 <p className="breakdown-label"
                    title="依實際歌曲譜面、Combo、特殊技能、主動技能、技能發動率加成（SAR）等時間點計算。">
-                  {songOutcome.meta.title} · 指定歌曲理論預估分（Perfect 假設）
+                  {songOutcome.meta.title}<ProvisionalTag chart={songOutcome.meta} /> · 指定歌曲理論預估分（Perfect 假設）
                 </p>
                 <b>{songOutcome.best.score.toLocaleString()}</b>
                 <p className="song-delta">
@@ -409,6 +410,7 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
                   （相差 {(songOutcome.best.score - songOutcome.best.worst).toLocaleString()}）
                 </p>
               </div>
+              <ProvisionalChartNotice chart={songOutcome.meta} />
 
               <ol className="order-line">
                 {songOutcome.best.order.map((memberIndex, slot) => {

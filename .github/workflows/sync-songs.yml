@@ -1,0 +1,194 @@
+name: Sync songs
+
+# Keeps the chart bundle current from two sources, and moves charts from the
+# weaker one to the stronger as soon as it can.
+#
+#   exact        Holodori's published pack, copied verbatim -- the same bytes
+#                tools/export_data.py has always produced.
+#   provisional  rebuilt from Hololive Dreams Lab for a song that is live in
+#                the game but that Holodori has not packed yet. The site says
+#                so wherever such a chart is scored.
+#
+# Running daily matters more for the upgrade than for the addition: a song
+# stays provisional only until Holodori publishes, and this is what notices.
+#
+# Existing exact charts are never rebuilt. The tool refuses to write if any of
+# their bytes would change, and the job checks the same thing against git
+# before committing, because that is the promise that makes an unattended
+# commit safe.
+
+on:
+  schedule:
+    # Daily, 04:00 UTC -- after the divisor sync (03:00) and the artwork sync
+    # (03:30), so the three never contend for the same branch.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      no_provisional:
+        description: 'Exact data only (do not add or keep rebuilt charts)'
+        type: boolean
+        default: false
+      apply:
+        description: 'Commit the change (off = dry run only)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: sync-songs
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    outputs:
+      # Set only after a push actually lands, so the deploy below cannot run
+      # for a failed sync, a failed check, or a push that was rejected.
+      pushed: ${{ steps.push.outputs.pushed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Fetches, converts and validates everything without opening a file for
+      # writing, so a source that changed shape fails before the bundle is
+      # touched at all.
+      - name: Dry run
+        run: |
+          python3 tools/sync_songs.py \
+            ${{ inputs.no_provisional && '--no-provisional' || '' }} | tee dry.log
+
+      - name: Apply
+        id: apply
+        run: |
+          python3 tools/sync_songs.py --apply \
+            ${{ inputs.no_provisional && '--no-provisional' || '' }} | tee sync.log
+          if git diff --quiet -- public/data/charts.json public/data/charts.bin; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify exact charts kept their bytes and nothing was dropped
+        if: steps.apply.outputs.changed == 'true'
+        run: |
+          git show HEAD:public/data/charts.bin > /tmp/old.bin
+          git show HEAD:public/data/charts.json > /tmp/old.json
+          python3 - <<'EOF'
+          import json, sys
+          before = json.load(open('/tmp/old.json', encoding='utf-8'))
+          after = json.load(open('public/data/charts.json', encoding='utf-8'))
+          old_blob = open('/tmp/old.bin','rb').read()
+          new_blob = open('public/data/charts.bin','rb').read()
+
+          def block(blob, located):
+              offset, count, _ = located
+              return blob[offset:offset + count * 4 + 20]
+
+          rows = {c['key']: c for c in after['charts']}
+          upgraded = broken = 0
+          for chart in before['charts']:
+              key = chart['key']
+              if key not in rows:
+                  sys.exit(f'FAILED: {key} was removed')
+              was = chart.get('provenance', 'exact')
+              now = rows[key].get('provenance')
+              same = block(old_blob, before['index'][key]) == block(new_blob, after['index'][key])
+              if was == 'exact':
+                  # Exact data is authoritative and must survive untouched.
+                  if not same:
+                      broken += 1
+                      print(f'  CHANGED {key}')
+                  if now != 'exact':
+                      sys.exit(f'FAILED: {key} regressed from exact to {now}')
+              elif was == 'provisional' and now == 'exact':
+                  upgraded += 1
+          if broken:
+              sys.exit(f'FAILED: {broken} exact chart(s) changed bytes')
+
+          songs_before = len({c['musicId'] for c in before['charts']})
+          songs_after = len({c['musicId'] for c in after['charts']})
+          if songs_after < songs_before:
+              sys.exit(f'FAILED: song count fell {songs_before} -> {songs_after}')
+          provisional = sum(1 for c in after['charts'] if c.get('provenance') == 'provisional')
+          print(f'exact charts intact; {upgraded} upgraded to exact; '
+                f'{provisional} still provisional; songs {songs_before} -> {songs_after}')
+          EOF
+
+      - name: Verify the site still builds and its tests pass
+        if: steps.apply.outputs.changed == 'true'
+        run: |
+          npm test
+          npm run build
+
+      - name: Commit and push
+        id: push
+        if: steps.apply.outputs.changed == 'true' && inputs.apply != false
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add public/data/charts.json public/data/charts.bin
+          git commit -F - <<'EOF'
+          Refresh the song catalogue
+
+          Automated: .github/workflows/sync-songs.yml. Adds songs the game has
+          released, and replaces provisional charts with Holodori's exact pack
+          as soon as it covers them. Charts already exact keep their bytes,
+          which the workflow checks against git before committing. The site's
+          tests and build ran against the new bundle.
+          EOF
+
+          # Another scheduled sync may have pushed while this one was working.
+          # Replaying this commit on top of that is safe where the two touched
+          # different files and impossible where they touched the same one, so
+          # a conflict stops the run rather than being resolved blindly -- the
+          # next run starts from the newer main and redoes the work.
+          git fetch origin main
+          if ! git rebase origin/main; then
+            git rebase --abort || true
+            echo "::error::origin/main moved and this change cannot be replayed on it; leaving it for the next run"
+            exit 1
+          fi
+          git push origin HEAD:refs/heads/main
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### Song sync'
+            echo
+            if [ "${{ steps.apply.outputs.changed }}" = 'true' ]; then
+              echo 'The catalogue changed. Details:'
+            else
+              echo 'No change; the catalogue already matches both sources.'
+            fi
+            echo
+            echo '```'
+            cat sync.log 2>/dev/null || cat dry.log 2>/dev/null \
+              || echo '(the sync step failed before writing a log)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Reached only when `sync` pushed a real change. A push made with the
+  # built-in GITHUB_TOKEN raises no `push` event, so without this the site
+  # would keep serving the previous bundle until someone pushed by hand.
+  deploy:
+    needs: sync
+    if: needs.sync.outputs.pushed == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy.yml

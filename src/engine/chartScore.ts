@@ -18,6 +18,19 @@ import type { MemberState } from './overallScore';
 /** Used only when a newly added chart has no public per-chart ratio yet. */
 export const FALLBACK_PLAIN_AP_MULTIPLIER = 2.3;
 
+/**
+ * Where a chart's timeline came from, and therefore how far to trust a score
+ * computed from it. Stated by the data rather than guessed from the file:
+ * tools/sync_songs.py writes it for every chart.
+ *
+ *   exact        Holodori's own pack, byte for byte.
+ *   provisional  rebuilt from Hololive Dreams Lab because no pack covers this
+ *                song yet. Times and note counts are right; some per-note
+ *                weights are not, worth up to ~0.45% of a score. Replaced
+ *                automatically once a pack arrives.
+ */
+export type ChartProvenance = 'exact' | 'provisional';
+
 export interface ChartMeta {
   key: string;
   musicId?: string;
@@ -27,6 +40,13 @@ export interface ChartMeta {
   scoreRatioEstimated?: number | null;
   fullComboNoteCount?: number;
   playingSeconds?: number;
+  /** Absent on a bundle written before this field existed; treat as exact. */
+  provenance?: ChartProvenance;
+}
+
+/** Whether a chart's numbers carry the provisional caveat. */
+export function isProvisional(chart: ChartMeta | null | undefined): boolean {
+  return chart?.provenance === 'provisional';
 }
 
 export interface ChartTimeline {

@@ -13,6 +13,7 @@ import {
   FUNNEL_DEPTHS, distinctFormations, rankSongResults, scoreCandidates, upliftOverGenericBest,
 } from '../engine/songOptimize';
 import { SongTimeline } from '../ui/SongTimeline';
+import { ProvisionalChartNotice, ProvisionalTag } from '../ui/ProvisionalChartNotice';
 import { CardArt } from '../ui/CardArt';
 import { ShareCardButton } from '../ui/ShareCardButton';
 import { DIFFICULTIES, attributeStyle, difficultyStyle, duration } from '../ui/theme';
@@ -395,7 +396,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                             onClick={() => setChartKey(chart.key)}>
                       <span className="song-level">{chart.difficultyLevel}</span>
                       <span className="song-text">
-                        <span className="song-title">{chart.title}</span>
+                        <span className="song-title">{chart.title}<ProvisionalTag chart={chart} /></span>
                         <span className="song-meta">
                           {chart.difficulty} · {(chart.fullComboNoteCount ?? 0).toLocaleString()} notes
                           {' · '}{duration(chart.playingSeconds)}
@@ -414,7 +415,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
               {mode === 'optimize' && chartMeta && (
                 <>
                   <header className="song-head">
-                    <h3>{chartMeta.title}</h3>
+                    <h3>{chartMeta.title}<ProvisionalTag chart={chartMeta} /></h3>
                     <p className="song-sub">
                       {chartMeta.difficulty} Lv.{chartMeta.difficultyLevel} ·
                       {' '}{(chartMeta.fullComboNoteCount ?? 0).toLocaleString()} notes ·
@@ -469,6 +470,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                           )}
                         </p>
                       </div>
+                      <ProvisionalChartNotice chart={chartMeta} />
 
                       <ol className="order-line">
                         {/* `order` permutes the candidate's own card indices, so
@@ -561,7 +563,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
               {mode === 'team' && outcome && (
                 <>
                   <header className="song-head">
-                    <h3>{outcome.meta.title}</h3>
+                    <h3>{outcome.meta.title}<ProvisionalTag chart={outcome.meta} /></h3>
                     <p className="song-sub">
                       {outcome.meta.difficulty} Lv.{outcome.meta.difficultyLevel} ·
                       {' '}{outcome.noteCount.toLocaleString()} notes ·
@@ -569,22 +571,28 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                     </p>
                   </header>
 
-                  <div className="song-score">
-                    <p className="breakdown-label"
-                       title="依實際歌曲譜面、Combo、特殊技能、主動技能、技能發動率加成（SAR）等時間點計算。">
-                      指定歌曲理論預估分（Perfect 假設）
-                    </p>
-                    <b>{outcome.best.score.toLocaleString()}</b>
-                    <p className="song-delta">
-                      最佳站位 · 最差站位 {outcome.worst.toLocaleString()}
-                      （相差 {(outcome.best.score - outcome.worst).toLocaleString()}）
-                    </p>
+                  {/* The card button sits on the score's last line rather than
+                      below it: it acts on this result, and a row of its own
+                      pushed the standing order a button's height further down
+                      for no reason. */}
+                  <div className="song-score-row">
+                    <div className="song-score">
+                      <p className="breakdown-label"
+                         title="依實際歌曲譜面、Combo、特殊技能、主動技能、技能發動率加成（SAR）等時間點計算。">
+                        指定歌曲理論預估分（Perfect 假設）
+                      </p>
+                      <b>{outcome.best.score.toLocaleString()}</b>
+                      <p className="song-delta">
+                        最佳站位 · 最差站位 {outcome.worst.toLocaleString()}
+                        （相差 {(outcome.best.score - outcome.worst).toLocaleString()}）
+                      </p>
+                    </div>
+                    <div className="song-actions">
+                      <ShareCardButton data={teamCard} images={images}
+                                       filename="hololive-dreams-song.png" />
+                    </div>
                   </div>
-
-                  <div className="song-actions">
-                    <ShareCardButton data={teamCard} images={images}
-                                     filename="hololive-dreams-song.png" />
-                  </div>
+                  <ProvisionalChartNotice chart={outcome.meta} />
 
                   <ol className="order-line">
                     {outcome.best.order.map((memberIndex, slot) => {
