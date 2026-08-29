@@ -1,14 +1,30 @@
 name: Deploy to GitHub Pages
 
+# Three ways in, and deliberately no way back out: this workflow calls nothing
+# else, so a sync that ends by deploying cannot start another sync.
+#
+#   push            a person pushing to main, exactly as before
+#   workflow_dispatch  a deploy by hand
+#   workflow_call   a scheduled sync that has already committed and pushed.
+#                   A push made with the built-in GITHUB_TOKEN does not raise
+#                   a `push` event -- that is GitHub's loop guard -- so a sync
+#                   that only pushed would leave the site on the old data
+#                   until someone pushed by hand. Being callable is what
+#                   closes that gap without a personal token.
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
 
-# Allow one deployment at a time; a newer push supersedes a running one.
+# One deployment at a time, and queued rather than cancelled: with three
+# scheduled syncs able to call this, cancelling would report a failure back to
+# a sync whose data is already safely on main. Pages only ever serves the
+# newest successful deployment, so waiting costs a few minutes and nothing else.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read

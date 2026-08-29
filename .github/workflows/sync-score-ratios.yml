@@ -31,6 +31,10 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    outputs:
+      # Set only after a push actually lands, so the deploy below cannot run
+      # for a failed sync, a failed check, or a push that was rejected.
+      pushed: ${{ steps.push.outputs.pushed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -65,7 +69,8 @@ jobs:
         if: steps.sync.outputs.changed == 'true'
         run: npm test
 
-      - name: Commit
+      - name: Commit and push
+        id: push
         if: steps.sync.outputs.changed == 'true' && inputs.apply != false
         run: |
           git config user.name  'github-actions[bot]'
@@ -79,7 +84,20 @@ jobs:
           disagrees with what was stored. The engine's parity tests ran
           against the new numbers before this commit.
           EOF
-          git push
+
+          # Another scheduled sync may have pushed while this one was working.
+          # Replaying this commit on top of that is safe where the two touched
+          # different files and impossible where they touched the same one, so
+          # a conflict stops the run rather than being resolved blindly -- the
+          # next run starts from the newer main and redoes the work.
+          git fetch origin main
+          if ! git rebase origin/main; then
+            git rebase --abort || true
+            echo "::error::origin/main moved and this change cannot be replayed on it; leaving it for the next run"
+            exit 1
+          fi
+          git push origin HEAD:refs/heads/main
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
 
       - name: Summary
         if: always()
@@ -97,3 +115,15 @@ jobs:
             cat sync.log 2>/dev/null || echo '(the fetch step failed before writing a log)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Reached only when `sync` pushed a real change. A push made with the
+  # built-in GITHUB_TOKEN raises no `push` event, so without this the site
+  # would keep serving the previous bundle until someone pushed by hand.
+  deploy:
+    needs: sync
+    if: needs.sync.outputs.pushed == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
