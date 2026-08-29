@@ -133,8 +133,8 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
                       rx={2} fill={color} className="tl-special">
                   <title>
                     {`特殊技能 ${special.start.toFixed(1)}–${special.end.toFixed(1)}s`
-                      + ` · 分數支援 +${row.specialSupport.toFixed(0)}`
-                      + (row.specialRate ? ` · 技能發動率加成 +${row.specialRate.toFixed(0)}` : '')}
+                      + ` · 分數支援 +${row.specialSupport.toFixed(0)}%`
+                      + (row.specialRate ? ` · 技能發動率加成 +${row.specialRate.toFixed(0)}%` : '')}
                   </title>
                 </rect>
               </g>
@@ -180,7 +180,7 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
                   <td className="tl-cell-name">{card ? memberName(card) : '—'}</td>
                   <td>
                     {row.specialWindow.start.toFixed(0)}–{row.specialWindow.end.toFixed(0)}s
-                    {row.specialSupport ? ` · +${row.specialSupport.toFixed(0)}` : ''}
+                    {row.specialSupport ? ` · +${row.specialSupport.toFixed(0)}%` : ''}
                   </td>
                   <td>{row.activeWindows.length} 次 · +{row.activeScoreUp.toFixed(0)}%</td>
                   <td>{share(row.activeTimeCoverage)}</td>

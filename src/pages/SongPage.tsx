@@ -168,7 +168,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
    */
   const coverage = (row: ChartMemberDetail): string[] => [
     `特殊 ${row.specialWindow.start.toFixed(0)}–${row.specialWindow.end.toFixed(0)}s`
-      + (row.specialRate ? ` · SAR +${row.specialRate.toFixed(0)}` : ''),
+      + (row.specialRate ? ` · SAR +${row.specialRate.toFixed(0)}%` : ''),
     `主動分數覆蓋 ${(row.activeScoreCoverage * 100).toFixed(1)}%`,
   ];
 

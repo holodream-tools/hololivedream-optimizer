@@ -48,7 +48,7 @@ export function passiveText(skill: SkillJson | null | undefined): string | null 
     return `${prefix}${target}的全能力 +${value}%`;
   }
   if (effect.endsWith('score_support') || effect.endsWith('score_support_conditional')) {
-    return `${prefix}${target}的分數支援 +${value}`;
+    return `${prefix}${target}的分數支援 +${value}%`;
   }
   const stat = STAT_LABEL[String(skill.stat ?? '')] ?? String(skill.stat ?? '能力');
   return `${prefix}${target}的 ${stat} +${value}%`;
@@ -82,7 +82,7 @@ export function specialText(skill: SkillJson | null | undefined): string | null 
   const support = Number(skill.score_support ?? 0);
   const rate = Number(skill.skill_rate_up ?? 0);
   const parts = [`持續 ${duration} 秒`];
-  if (support) parts.push(`分數支援 +${support}`);
+  if (support) parts.push(`分數支援 +${support}%`);
   if (rate) parts.push(`主動技能發動率 +${rate}%`);
   return parts.join('、');
 }
@@ -91,10 +91,11 @@ export function outfitText(payload: OutfitPayload | null | undefined): string | 
   if (!payload) return null;
   const when = conditionText(payload.condition);
   const prefix = when ? `${when}，` : '';
+  // Every effect an Outfit carries is a percentage, Score Support included:
+  // it reaches the score through the same `/ 100` the stat bonuses do.
   const effects = (payload.effects ?? []).map((effect) => {
     const stat = STAT_LABEL[String(effect.stat ?? '')] ?? String(effect.stat ?? '');
-    const unit = effect.stat === 'score_support' ? '' : '%';
-    return `全員 ${stat} +${effect.value ?? 0}${unit}`;
+    return `全員 ${stat} +${effect.value ?? 0}%`;
   });
   return effects.length ? `${prefix}${effects.join('、')}` : null;
 }
