@@ -66,18 +66,15 @@ export interface PreparedChart {
   lastTime: number;
 }
 
-/** Convert the compact chart weight to the game's per-note scale. */
 /**
- * Published Combo Bonus: +1% from 100 Combo, +1% per 100 after, capped at +10%.
- * The counter runs over every note, hold ticks included, which is the same
- * index the Combo conditions read.
+ * The multiplier the packed note already carries, with the mid/normal base
+ * divided back out: Combo Bonus times the Flick 1.05, between 1.00 and 1.155.
+ *
+ * The pack bakes both in. `weight` is `base * comboBonus * flick`, base being
+ * 100 for a mid note and 1000 for every other, so dividing by the base leaves
+ * exactly the multipliers. Applying the Combo Bonus again here would charge it
+ * twice; it is the note's, not the scorer's.
  */
-function comboBonus(combo: number): number {
-  if (combo >= 1000) return 0.1;
-  if (combo >= 100) return Math.floor(combo / 100) / 100;
-  return 0;
-}
-
 function noteScale(weight: number): number {
   return weight < 200 ? weight / 100 : weight / 1000;
 }
@@ -108,24 +105,19 @@ export function prepare(chart: ChartMeta, timeline: ChartTimeline): PreparedChar
   const count = timeline.times.length;
   const midPrefix = new Float64Array(count + 1);
   const normalPrefix = new Float64Array(count + 1);
-  // The Combo Bonus rides on the note, so it belongs in the prefix sums; the
-  // fallback ratio keeps using the unweighted total.
-  let plainScale = 0;
   for (let i = 0; i < count; i++) {
     const weight = timeline.weights[i];
     const scale = noteScale(weight);
-    plainScale += scale;
-    const weighted = scale * (1 + comboBonus(i + 1));
     const isMid = weight < 200;
-    midPrefix[i + 1] = midPrefix[i] + (isMid ? weighted : 0);
-    normalPrefix[i + 1] = normalPrefix[i] + (isMid ? 0 : weighted);
+    midPrefix[i + 1] = midPrefix[i] + (isMid ? scale : 0);
+    normalPrefix[i + 1] = normalPrefix[i] + (isMid ? 0 : scale);
   }
   let ratio = Number(chart.scoreRatioEstimated ?? 0);
   let ratioSource: string;
   if (ratio > 0) {
     ratioSource = 'Hololive Dreams Lab estimated chart ratio';
   } else {
-    ratio = Math.max(plainScale / FALLBACK_PLAIN_AP_MULTIPLIER, 1e-9);
+    ratio = Math.max((midPrefix[count] + normalPrefix[count]) / FALLBACK_PLAIN_AP_MULTIPLIER, 1e-9);
     ratioSource = 'local note-weight fallback';
   }
   return {
