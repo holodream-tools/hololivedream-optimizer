@@ -378,8 +378,11 @@ button:disabled { opacity: .45; cursor: default; }
 .song-score { margin: 16px 0; }
 /* The label names Perfect, and uppercasing it would rewrite the term. */
 .song-score .breakdown-label { text-transform: none; letter-spacing: .04em; font-size: 11px; }
-.song-score b { display: block; font-size: 34px; font-weight: 750; color: var(--brand);
-                font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 3px; }
+/* The direct child only: the line below is a sentence, and a bold run inside it
+   picking up 34px block styling turned its percentage into a second headline
+   number on a line of its own. */
+.song-score > b { display: block; font-size: 34px; font-weight: 750; color: var(--brand);
+                  font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 3px; }
 .song-delta { margin: 4px 0 0; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .order-line { list-style: none; display: grid; gap: 8px; margin: 0 0 16px; padding: 0;
               grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); }
@@ -773,14 +776,26 @@ button:disabled { opacity: .45; cursor: default; }
 /* Seven columns, so they get their own widths under the shared fixed layout.
    The score-coverage column carries a number and its lift chip side by side and
    needs the room for both. */
-.timeline-table { font-size: 12px; min-width: 760px; --tl-lift-lane: 56px; }
-.timeline-table .tl-cell-name { text-align: left; overflow-wrap: anywhere; }
+/* Column widths measured against the widest thing each one holds, HEADER
+   INCLUDED: a 3-digit-both-ends Special window with a 3-digit percent needs
+   162px, the Active count 113px, a full member name 137px, the coverage figures
+   68px plus the lift lane, and every header 40-123px with its padding. Sizing
+   from the body cells alone left "站位" on exactly its 40px, which held here and
+   wrapped under any font a shade wider; each column now has room to spare.
+   Headers are two to four characters and never a reason to grow a row, so they
+   are told not to break at all. */
+.timeline-table { font-size: 12px; min-width: 800px; --tl-lift-lane: 56px; }
+.timeline-table thead th { white-space: nowrap; }
+.timeline-table .tl-cell-name, .timeline-table th.tl-th-name { text-align: left; }
+.timeline-table .tl-cell-name { overflow-wrap: anywhere; }
+.timeline-table .tl-cell-skill { white-space: nowrap; }
 .timeline-table col.tl-col-slot { width: 7%; }
-.timeline-table col.tl-col-name { width: 20%; }
-.timeline-table col.tl-col-skill { width: 14%; }
-.timeline-table col.tl-col-cov { width: 12%; }
+.timeline-table col.tl-col-name { width: 18%; }
+.timeline-table col.tl-col-skill:nth-of-type(3) { width: 22%; }
+.timeline-table col.tl-col-skill:nth-of-type(4) { width: 15%; }
+.timeline-table col.tl-col-cov { width: 10%; }
 /* Wider than its neighbours: it carries the lift chip's reserved lane too. */
-.timeline-table col.tl-col-score { width: 21%; }
+.timeline-table col.tl-col-score { width: 18%; }
 .timeline-table th.tl-th-score { padding-right: calc(10px + var(--tl-lift-lane) + 8px); }
 /* The lift sits beside the coverage, not against it: at 10.5px and 5px away it
    read as part of the number. Its own chip, its own gap, an arrow big enough to
@@ -923,4 +938,20 @@ button.danger { color: var(--happy); border-color: var(--happy-line); }
 .song-eval h4 { display: flex; gap: 9px; align-items: baseline; flex-wrap: wrap;
                 margin: 0 0 10px; font-size: 13px; font-weight: 700; }
 .song-eval h4 span { font-size: 11.5px; font-weight: 400; color: var(--ink-3); }
+
+/* Frequency Up node recommendation, inside the song evaluation. */
+.freq-nodes { margin: 16px 0 0; }
+.freq-nodes h4 { display: flex; gap: 9px; align-items: baseline; flex-wrap: wrap;
+                 margin: 0 0 9px; font-size: 13px; font-weight: 700; }
+.freq-nodes h4 span { font-size: 11.5px; font-weight: 400; color: var(--ink-3); }
+.freq-nodes ul { list-style: none; margin: 0 0 10px; padding: 0;
+                 display: flex; flex-direction: column; gap: 5px; }
+/* Name and count on one line; the name takes the slack so the counts stay in a
+   column the eye can run down. */
+.freq-nodes li { display: flex; gap: 10px; align-items: baseline;
+                 padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px;
+                 background: var(--surface-2); }
+.freq-name { flex: 1 1 auto; font-size: 12.5px; font-weight: 650; }
+.freq-pick { flex: 0 0 auto; font-size: 12.5px; font-weight: 700; color: var(--brand);
+             font-variant-numeric: tabular-nums; }
 button.danger:hover { background: var(--happy-soft); }

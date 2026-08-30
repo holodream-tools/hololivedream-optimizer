@@ -63,6 +63,9 @@ export function cardFacts(cards: CardJson[], blooms: number[]): CardFacts[] {
       passiveCondition: (passive?.condition as never) ?? null,
       activePresent: !!active && Object.keys(active).length > 0,
       activeProbability: num(active, 'activation_probability_permil') / 1000,
+      // The player's own board is not in the card bundle; only the frequency
+      // recommendation, which states the board it assumes, fills this in.
+      boardActivationRate: 0,
       activeInterval: num(active, 'interval'),
       activeDuration: num(active, 'duration'),
       activeScoreUp: num(active, 'score_up'),

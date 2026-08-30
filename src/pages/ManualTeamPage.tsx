@@ -1,17 +1,19 @@
 /** 自選隊伍 — score any five cards you pick, with the contributions broken out. */
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { cardFacts, outfitTable } from '../engine/precompute';
 import {
   expectedIndexOf, leaderPowerAndSupport, makeMemberState, memberPart, memberStatTotals,
 } from '../engine/overallScore';
 import { bestOrder } from '../engine/compare';
 import { materialize, prepare } from '../engine/chartScore';
+import { recommendFrequencyNodes } from '../engine/frequencyBoard';
 import { attributeStyle } from '../ui/theme';
 import { outfitText } from '../ui/skillText';
 import { PassiveConditions } from '../ui/PassiveConditions';
 import { CardArt } from '../ui/CardArt';
 import { SongTimeline } from '../ui/SongTimeline';
 import { ProvisionalChartNotice, ProvisionalTag } from '../ui/ProvisionalChartNotice';
+import { FrequencyNodes } from '../ui/FrequencyNodes';
 import { shareUrl } from '../lib/share';
 import { ShareCardButton } from '../ui/ShareCardButton';
 import type { ShareCardData } from '../lib/shareCard';
@@ -130,6 +132,21 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
   }, [chartMeta, charts, chartBlob, songKey]);
 
   /**
+   * The five members and their Outfit, resolved the way the scorer wants them.
+   *
+   * Shared by the song evaluation and the board sweep below so the two cannot
+   * disagree about who is being scored or at what Bloom.
+   */
+  const scoringInputs = useMemo(() => {
+    if (!evaluation || evaluation.duplicate) return null;
+    const { members, leader } = evaluation;
+    const facts = cardFacts(members, members.map((card) => bloomOf(card.id)));
+    const leaderBloom = Math.min(bloomOf(leader.id.replace(/^outfit:/, '')), leader.maxBloom);
+    const outfits = outfitTable([leader], [leaderBloom]);
+    return { facts, payload: outfits.payloads[outfits.signatureOf[0]] };
+  }, [evaluation, bloomOf]);
+
+  /**
    * This fixed team's performance on the chosen chart -- the same `bestOrder`
    * search 歌曲／順序's "指定隊伍" mode calls, over the same five members and
    * Leader Outfit `evaluation` already resolved. Choosing a song only looks
@@ -137,12 +154,8 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
    * the team.
    */
   const songOutcome = useMemo(() => {
-    if (!evaluation || evaluation.duplicate || !chartMeta || !chartPrepared) return null;
-    const { members, leader } = evaluation;
-    const facts = cardFacts(members, members.map((card) => bloomOf(card.id)));
-    const leaderBloom = Math.min(bloomOf(leader.id.replace(/^outfit:/, '')), leader.maxBloom);
-    const outfits = outfitTable([leader], [leaderBloom]);
-    const payload = outfits.payloads[outfits.signatureOf[0]];
+    if (!scoringInputs || !chartMeta || !chartPrepared) return null;
+    const { facts, payload } = scoringInputs;
     const best = bestOrder(facts, [0, 1, 2, 3, 4], payload, chartPrepared);
     const figures = [
       { label: '加成後總合力', value: best.detail.totalPower.toLocaleString() },
@@ -151,7 +164,28 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
       { label: '主動技能實際貢獻', value: `+${best.detail.activeBonus.toFixed(1)}%` },
     ];
     return { meta: chartMeta, prepared: chartPrepared, best, figures };
-  }, [evaluation, chartMeta, chartPrepared, bloomOf]);
+  }, [scoringInputs, chartMeta, chartPrepared]);
+
+  /**
+   * How many Activation Frequency Up nodes each member should unlock for this
+   * song, from the same chart engine the score above comes from.
+   *
+   * Cheap enough to keep in a memo rather than behind a button: 1024
+   * arrangements on one fixed standing order, then the best REORDER_DEPTH
+   * re-searched over all 120 orders, is a fraction of a second. It recomputes
+   * only when the five, the Outfit or the song change, which is when the
+   * answer really is different.
+   *
+   * Deferred so the score and standing order the player asked for paint first
+   * and the suggestion fills in behind them.
+   */
+  const deferredInputs = useDeferredValue(scoringInputs);
+  const deferredChart = useDeferredValue(chartPrepared);
+  const frequencyNodes = useMemo(() => {
+    if (!deferredInputs || !deferredChart) return null;
+    return recommendFrequencyNodes(deferredInputs.facts, [0, 1, 2, 3, 4],
+      deferredInputs.payload, deferredChart);
+  }, [deferredInputs, deferredChart]);
 
   /**
    * The link, from the same builder the page has always used.
@@ -458,6 +492,11 @@ export function ManualTeamPage({ state, onCompare }: { state: AppState; onCompar
               <p className="metric-note">
                 這個數字依實際歌曲譜面、Combo、特殊技能、主動技能、技能發動率加成（SAR）等時間點逐音符計算，與上面的綜合推薦指數量綱不同，兩者不能互相比較。
               </p>
+
+              {/* Same five, same song, same scorer -- only which Frequency Up
+                  nodes are unlocked changes. Kept next to the score it was
+                  derived from rather than in a panel of its own. */}
+              <FrequencyNodes members={evaluation.members} nodes={frequencyNodes} />
 
               <section className="timeline-block">
                 <h4>

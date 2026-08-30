@@ -60,6 +60,17 @@ export interface CardFacts {
   passiveCondition: OutfitCondition | null;
   activePresent: boolean;
   activeProbability: number;
+  /**
+   * Activation Rate Up already standing from this member's holomem Board, in
+   * percentage points. Zero everywhere the player's board is not modelled; the
+   * frequency-node recommendation sets it, because a board complete enough to
+   * be choosing between those nodes is also carrying every Activation Rate node
+   * on the way to them.
+   *
+   * Summed with the Special windows' Rate Up before a single multiplication,
+   * which is the published rule for stacking activation-rate effects.
+   */
+  boardActivationRate: number;
   activeInterval: number;
   activeDuration: number;
   activeScoreUp: number;

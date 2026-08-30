@@ -5,14 +5,16 @@
  * Standing order matters because the five Special slots fire at times the chart
  * fixes; which member holds which slot changes what the Specials cover.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { materialize, prepare } from '../engine/chartScore';
 import { cardFacts, outfitTable } from '../engine/precompute';
 import { bestOrder } from '../engine/compare';
+import { recommendFrequencyNodes } from '../engine/frequencyBoard';
 import {
   FUNNEL_DEPTHS, distinctFormations, rankSongResults, scoreCandidates, upliftOverGenericBest,
 } from '../engine/songOptimize';
 import { SongTimeline } from '../ui/SongTimeline';
+import { FrequencyNodes } from '../ui/FrequencyNodes';
 import { ProvisionalChartNotice, ProvisionalTag } from '../ui/ProvisionalChartNotice';
 import { CardArt } from '../ui/CardArt';
 import { ShareCardButton } from '../ui/ShareCardButton';
@@ -154,8 +156,25 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
     ];
     return {
       meta, prepared, best, worst: best.worst, detail: best.detail, noteCount: count, figures,
+      facts, payload,
     };
   }, [team, chartMeta, chartPrepared, charts, chartKey, inventory]);
+
+  /**
+   * Frequency Up nodes for the team the "指定隊伍" panel is showing.
+   *
+   * The sweep is 1024 arrangements over one team, so it belongs to whichever
+   * team is on screen rather than to the search that found them. Deferred so
+   * the score and the standing order paint first and this fills in behind
+   * them: it is a suggestion about the next thing to spend points on, not part
+   * of the answer the player asked for.
+   */
+  const deferredOutcome = useDeferredValue(outcome);
+  const teamNodes = useMemo(() => {
+    if (!deferredOutcome || !chartPrepared) return null;
+    return recommendFrequencyNodes(deferredOutcome.facts, [0, 1, 2, 3, 4],
+      deferredOutcome.payload, chartPrepared);
+  }, [deferredOutcome, chartPrepared]);
 
   /**
    * The chart line under a song title, in the words the page's own header uses.
@@ -221,6 +240,67 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
   };
 
   /**
+   * Frequency Up nodes for the ranked team the timeline is drawing.
+   *
+   * Deliberately not folded into the funnel. The search already scores 200 or
+   * 1000 formations over 120 standing orders each; multiplying that by 1024
+   * arrangements would turn a few seconds into an hour to answer a question
+   * about the one team a player is actually looking at. So the ranking runs
+   * exactly as before and this sweeps only the team on screen -- and again when
+   * a different row is picked, which is a fraction of a second.
+   *
+   * Deferred as well, so that fraction of a second lands after the ranking has
+   * painted rather than in front of it.
+   */
+  const deferredRanked = useDeferredValue(ranked);
+  const deferredTimelineTeam = useDeferredValue(timelineTeam);
+  const rankedNodes = useMemo(() => {
+    const row = deferredRanked?.[deferredTimelineTeam];
+    if (!row || !chartPrepared) return null;
+    const members = row.order.map((cardIndex) => owned[cardIndex]);
+    if (members.some((card) => !card)) return null;
+    const leader = unlockedLeaders[row.leaderIndex];
+    if (!leader) return null;
+    const facts = cardFacts(members,
+      members.map((card) => inventory.get(card.id)?.bloom ?? card.maxBloom));
+    const leaderBloom = Math.min(
+      inventory.get(leader.id.replace(/^outfit:/, ''))?.bloom ?? leader.maxBloom,
+      leader.maxBloom,
+    );
+    const outfits = outfitTable([leader], [leaderBloom]);
+    const payload = outfits.payloads[outfits.signatureOf[0]];
+    return {
+      members,
+      nodes: recommendFrequencyNodes(facts, [0, 1, 2, 3, 4], payload, chartPrepared),
+    };
+  }, [deferredRanked, deferredTimelineTeam, chartPrepared, owned, unlockedLeaders, inventory]);
+
+  /**
+   * The ranked team the whole detail panel is describing.
+   *
+   * Picking a row in the leaderboard picks the subject of everything above it --
+   * the score, the standing order, the Outfit, the timeline, the node advice --
+   * not just which row is highlighted. Falls back to the winner so a stale index
+   * cannot blank the panel.
+   */
+  const picked = ranked?.[timelineTeam] ?? ranked?.[0] ?? null;
+
+  /**
+   * How the picked team compares with the generic #1 team on this song.
+   *
+   * Null when the picked team IS the generic #1, because then the sentence
+   * compares it with itself: "比通用最佳隊高 0.00%（通用 #1 在這首歌排第 1）"
+   * is a fact about nothing. Its own generic rank still gets printed.
+   */
+  const genericCompare = (() => {
+    if (!picked || !uplift || picked.genericRank === 1) return null;
+    const delta = uplift.genericBestScore
+      ? picked.songScore / uplift.genericBestScore - 1 : 0;
+    // Below the printed precision the sign is noise, so it is not claimed.
+    return { delta, tiny: Math.abs(delta) < 0.00005 };
+  })();
+
+  /**
    * Whichever ranked team the timeline is drawing -- the one being looked at,
    * not necessarily the winner.
    */
@@ -232,14 +312,17 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
     if (!leader || members.some((card) => !card)) return null;
     const rows = row.detail.members ?? [];
     const leaderCardId = leader.id.replace(/^outfit:/, '');
-    // Only what this mode actually reports: the uplift describes the top team,
-    // so it belongs on the top team's card and on no other.
+    // Only what this mode actually reports, and only where it says something:
+    // the generic #1 team compared with itself is a 0.00% line.
     const stats = [
       { label: '歌曲排名', value: `#${row.songRank}` },
       { label: '通用排名', value: `#${row.genericRank}` },
     ];
-    if (timelineTeam === 0 && uplift) {
-      stats.push({ label: '比通用最佳隊高', value: `${(uplift.uplift * 100).toFixed(2)}%` });
+    if (genericCompare && !genericCompare.tiny) {
+      stats.push({
+        label: genericCompare.delta > 0 ? '在這首歌高於通用 #1' : '在這首歌低於通用 #1',
+        value: `${(Math.abs(genericCompare.delta) * 100).toFixed(2)}%`,
+      });
     }
     return {
       subject: String(chartMeta.title),
@@ -482,24 +565,30 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                     </p>
                   )}
 
-                  {ranked && ranked.length > 0 && (
+                  {ranked && ranked.length > 0 && picked && (
                     <>
                       <div className="song-score">
                         <p className="breakdown-label"
                            title="依實際歌曲譜面、Combo、特殊技能、主動技能、技能發動率加成（SAR）等時間點計算。">
-                          這首歌的最佳隊伍 · 預估分（Perfect 假設）
+                          {picked.songRank === 1
+                            ? '這首歌的最佳隊伍'
+                            : `這首歌第 ${picked.songRank} 名隊伍`}
+                          {' · '}預估分（Perfect 假設）
                         </p>
-                        <b>{ranked[0].songScore.toLocaleString()}</b>
+                        <b>{picked.songScore.toLocaleString()}</b>
                         <p className="song-delta">
-                          該隊伍的通用排名 #{ranked[0].genericRank}
-                          {uplift && (
-                            <>
-                              {' · '}比通用最佳隊在這首歌高{' '}
-                              <b className="uplift">{(uplift.uplift * 100).toFixed(2)}%</b>
-                              （通用 #1 在這首歌排第 {uplift.genericBestSongRank}，
-                              {uplift.genericBestScore.toLocaleString()} 分）
-                            </>
-                          )}
+                          通用排名 #{picked.genericRank}
+                          {genericCompare && (genericCompare.tiny
+                            ? <>，在這首歌與通用 #1 幾乎相同</>
+                            : (
+                              <>
+                                ，在這首歌表現
+                                {genericCompare.delta > 0 ? '高於' : '低於'}通用 #1 約{' '}
+                                <b className="uplift">
+                                  {(Math.abs(genericCompare.delta) * 100).toFixed(2)}%
+                                </b>
+                              </>
+                            ))}
                         </p>
                       </div>
                       <ProvisionalChartNotice chart={chartMeta} />
@@ -507,7 +596,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                       <ol className="order-line">
                         {/* `order` permutes the candidate's own card indices, so
                             each entry already points into `owned`. */}
-                        {ranked[0].order.map((cardIndex, slot) => {
+                        {picked.order.map((cardIndex, slot) => {
                           const card = owned[cardIndex];
                           if (!card) return null;
                           const style = attributeStyle(card.type);
@@ -522,7 +611,7 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                         })}
                       </ol>
                       <p className="song-source">
-                        隊長服裝：{(() => { const l = unlockedLeaders[ranked[0].leaderIndex]; return l ? leaderName(l) : '—'; })()}
+                        隊長服裝：{(() => { const l = unlockedLeaders[picked.leaderIndex]; return l ? leaderName(l) : '—'; })()}
                       </p>
 
                       <table className="cmp-table song-rank-table">
@@ -549,14 +638,18 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                         </tbody>
                       </table>
 
-                      {ranked[timelineTeam] && chartPrepared && (
+                      {rankedNodes && (
+                        <FrequencyNodes members={rankedNodes.members} nodes={rankedNodes.nodes} />
+                      )}
+
+                      {chartPrepared && (
                         <section className="timeline-block">
                           <h4>
                             時間軸分析
                             <span>
-                              第 {ranked[timelineTeam].songRank} 名 ·
-                              {' '}{ranked[timelineTeam].songScore.toLocaleString()} 分 ·
-                              {' '}通用 #{ranked[timelineTeam].genericRank}
+                              第 {picked.songRank} 名 ·
+                              {' '}{picked.songScore.toLocaleString()} 分 ·
+                              {' '}通用 #{picked.genericRank}
                             </span>
                           </h4>
                           {/* This block names one ranked team, so the card made
@@ -567,14 +660,14 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                           </div>
                           <p className="timeline-order">
                             最佳技能順序：
-                            {ranked[timelineTeam].order
+                            {picked.order
                               .map((cardIndex, slot) => `${slot + 1}. ${owned[cardIndex] ? memberName(owned[cardIndex]) : '?'}`)
                               .join('　')}
                           </p>
                           <SongTimeline
                             prepared={chartPrepared}
-                            detail={ranked[timelineTeam].detail}
-                            members={ranked[timelineTeam].order.map((cardIndex) => owned[cardIndex])}
+                            detail={picked.detail}
+                            members={picked.order.map((cardIndex) => owned[cardIndex])}
                           />
                         </section>
                       )}
@@ -651,6 +744,8 @@ export function SongPage({ state, teamIndex }: { state: AppState; teamIndex: num
                   <p className="metric-note">
                     這個數字依實際歌曲譜面、Combo、特殊技能、主動技能、技能發動率加成（SAR）等時間點逐音符計算，與「隊伍最佳化」的綜合推薦指數量綱不同，兩者不能互相比較。
                   </p>
+
+                  <FrequencyNodes members={team!.members} nodes={teamNodes} />
 
                   {/* The same component on the same detail object the score above
                       was read from: this mode already ran all 120 orders through

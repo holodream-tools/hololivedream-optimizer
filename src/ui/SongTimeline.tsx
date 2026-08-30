@@ -158,7 +158,7 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
           </colgroup>
           <thead>
             <tr>
-              <th scope="col">站位</th><th scope="col">成員</th>
+              <th scope="col">站位</th><th scope="col" className="tl-th-name">成員</th>
               <th scope="col">特殊技能</th><th scope="col">主動技能</th>
               <th scope="col">時間覆蓋</th><th scope="col">音符覆蓋</th>
               <th scope="col" className="tl-th-score">分數覆蓋</th>
@@ -178,11 +178,16 @@ export function SongTimeline({ prepared, detail, members }: SongTimelineProps) {
                     {index + 1}
                   </th>
                   <td className="tl-cell-name">{card ? memberName(card) : '—'}</td>
-                  <td>
+                  {/* One line each: "106-117s · +120%" reads as a single fact and
+                      breaking it after the window start makes the column look
+                      like two. The columns are sized for the widest of them. */}
+                  <td className="tl-cell-skill">
                     {row.specialWindow.start.toFixed(0)}–{row.specialWindow.end.toFixed(0)}s
                     {row.specialSupport ? ` · +${row.specialSupport.toFixed(0)}%` : ''}
                   </td>
-                  <td>{row.activeWindows.length} 次 · +{row.activeScoreUp.toFixed(0)}%</td>
+                  <td className="tl-cell-skill">
+                    {row.activeWindows.length} 次 · +{row.activeScoreUp.toFixed(0)}%
+                  </td>
                   <td>{share(row.activeTimeCoverage)}</td>
                   <td>{share(row.activeNoteCoverage)}</td>
                   <td>

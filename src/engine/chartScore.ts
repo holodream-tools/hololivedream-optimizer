@@ -306,7 +306,10 @@ export function projectedScore(
     let check = interval;
     while (interval > 0 && duration > 0 && check <= prepared.lastTime) {
       const comboBefore = bisectLeft(times, check, noteCount);
-      let rate = 0;
+      // Activation Rate Up stacks by adding the percentages and multiplying
+      // once, so the board's standing bonus joins the Special windows' before
+      // the rate is applied rather than compounding with them.
+      let rate = row.boardActivationRate;
       for (let s = 0; s < count; s++) if (specialStart[s] <= check && check < specialEnd[s]) rate += specialRate[s];
       let magnitude = row.activeScoreUp;
       if (row.activeConditionalScoreUp !== null && conditionMet(row.activeCondition, rows, comboBefore)) {
