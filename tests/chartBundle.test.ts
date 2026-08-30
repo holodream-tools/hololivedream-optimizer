@@ -70,6 +70,7 @@ describe('chart bundle', () => {
   });
 
   it('keeps every timeline inside charts.bin and decodable', () => {
+    const outOfOrder: string[] = [];
     for (const chart of bundle.charts) {
       const [offset, count, lastTime] = bundle.index[chart.key];
       expect(count, chart.key).toBe(chart.fullComboNoteCount);
@@ -83,11 +84,15 @@ describe('chart bundle', () => {
       // agree with it or the timeline drawing is reading a different chart.
       expect(Math.round(timeline.times[count - 1] * 1000), chart.key).toBe(lastTime);
       expect(timeline.specialTimes.length, chart.key).toBe(5);
+      // Named rather than asserted per note: this runs over 442k notes, and an
+      // expect() each is most of the file's runtime for no more information.
       for (let i = 1; i < count; i++) {
-        expect(timeline.times[i], `${chart.key} note ${i}`)
-          .toBeGreaterThanOrEqual(timeline.times[i - 1]);
+        if (timeline.times[i] < timeline.times[i - 1]) {
+          outOfOrder.push(`${chart.key} note ${i}`);
+        }
       }
     }
+    expect(outOfOrder, outOfOrder.slice(0, 5).join(', ')).toEqual([]);
   });
 
   it('prepares every chart into finite, positive scoring weight', () => {

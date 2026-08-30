@@ -74,6 +74,9 @@ describe('packed chart weights', () => {
     // what makes it the Combo Bonus rather than some other per-note scaling.
     let checked = 0;
     let grew = 0;
+    // Collected rather than asserted per note: 127k expect() calls cost more
+    // than the whole rest of the suite and say no more than one name does.
+    const wrong: string[] = [];
     for (const chart of chartsBundle.charts) {
       const [offset, count] = chartsBundle.index[chart.key];
       const timeline = materialize(blob, offset, count);
@@ -83,13 +86,16 @@ describe('packed chart weights', () => {
         const weight = timeline.weights[i];
         if (weight >= 200) continue;
         const bonus = Math.round((weight / 100 - 1) * 100);
-        expect(bonus, `${chart.key}#${i}`).toBe(Math.round(comboBonus(i + 1) * 100));
+        if (bonus !== Math.round(comboBonus(i + 1) * 100) && wrong.length < 5) {
+          wrong.push(`${chart.key}#${i}: ${bonus} not ${Math.round(comboBonus(i + 1) * 100)}`);
+        }
         if (first === null) first = bonus;
         last = bonus;
         checked++;
       }
       if (first !== null && last > first) grew++;
     }
+    expect(wrong, wrong.join(', ')).toEqual([]);
     expect(checked).toBeGreaterThan(10000);
     // A pack that had left the bonus out would read 0 everywhere and still pass
     // the loop on a chart under 100 notes; most charts have to show it growing.
